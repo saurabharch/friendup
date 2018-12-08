@@ -415,7 +415,27 @@ static int MobileAppReplyError(struct lws *wsi, int error_code)
 	DEBUG("Error response: %s\n", response+LWS_PRE);
 
 	DEBUG("WSI %p\n", wsi);
-	lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
+	{
+		FQEntry *en = FCalloc( 1, sizeof( FQEntry ) );
+		if( en != NULL )
+		{
+			en->fq_Data = FMalloc( 64+LWS_SEND_BUFFER_PRE_PADDING+LWS_SEND_BUFFER_POST_PADDING );
+			memcpy( en->fq_Data+LWS_SEND_BUFFER_PRE_PADDING, "{\"t\":\"keepalive\",\"status\":1}", 28 );
+			en->fq_Size = LWS_PRE+64;
+
+			FQPushFIFO( &(user_connections->connection[i]->mac_Queue), en );
+			lws_callback_on_writable( user_connections->connection[i]->mac_WebsocketPtr );
+			//FQPushFIFO( &(man->man_Queue), en );
+			//lws_callback_on_writable( user_connections->connection[i]->websocket_ptr );
+		}
+	}
+	//
+	// This will not work here
+	//
+	//lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
+	/*
+	static inline int WriteMessage( struct MobileAppConnectionS *mac, unsigned char *msg, int len )
+	 */
 
 	char *websocket_hash = MobileAppGetWebsocketHash( wsi );
 	MobileAppConnectionT *app_connection = HashmapGetData(_websocket_to_user_connections_map, websocket_hash);
