@@ -126,7 +126,8 @@ static void MobileAppInit( void )
 
 	pthread_mutex_init( &_session_removal_mutex, NULL );
 
-	pthread_create( &_ping_thread, NULL/*default attributes*/, MobileAppPingThread, NULL/*extra args*/ );
+	// clent should handle connecton, not server
+	//pthread_create( &_ping_thread, NULL/*default attributes*/, MobileAppPingThread, NULL/*extra args*/ );
 
 #if ENABLE_MOBILE_APP_NOTIFICATION_TEST_SIGNAL == 1
 	signal( SIGUSR1, MobileAppTestSignalHandler );
@@ -162,10 +163,10 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 		char *websocket_hash = MobileAppGetWebsocketHash( wsi );
 		MobileAppConnectionT *app_connection = HashmapGetData(_websocket_to_user_connections_map, websocket_hash);
 
-		if (app_connection == NULL)
+		if( app_connection == NULL )
 		{
 			DEBUG("Websocket close - no user session found for this socket\n");
-			return MobileAppReplyError(wsi, MOBILE_APP_ERR_NO_SESSION);
+			return MobileAppReplyError( wsi, MOBILE_APP_ERR_NO_SESSION_ON_CLOSED );
 		}
 		FRIEND_MUTEX_LOCK(&_session_removal_mutex);
 		
@@ -274,23 +275,23 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 	jsmn_init(&parser);
 	jsmntok_t tokens[16]; //should be enough
 
-	int tokens_found = jsmn_parse(&parser, data, len, tokens, sizeof(tokens)/sizeof(tokens[0]));
+	int tokensFound = jsmn_parse( &parser, data, len, tokens, sizeof(tokens)/sizeof(tokens[0]) );
 
 	DEBUG("JSON tokens found %d\n", tokens_found);
 
-	if (tokens_found < 1)
+	if( tokensFound < 1)
 	{
 		return MobileAppReplyError(wsi, MOBILE_APP_ERR_NO_JSON);
 	}
 
-	json_t json = { .string = data, .string_length = len, .token_count = tokens_found, .tokens = tokens };
+	json_t json = { .string = data, .string_length = len, .token_count = tokensFound, .tokens = tokens };
 
 	char *msg_type_string = json_get_element_string(&json, "t");
 
 	//see if this websocket belongs to an existing connection
-	char *websocket_hash = MobileAppGetWebsocketHash(wsi);
-	MobileAppConnectionT *app_connection = HashmapGetData( _websocket_to_user_connections_map, websocket_hash );
-	FFree(websocket_hash);
+	char *websocketHash = MobileAppGetWebsocketHash( wsi );
+	MobileAppConnectionT *app_connection = HashmapGetData( _websocket_to_user_connections_map, websocketHash );
+	FFree( websocketHash );
 
 	if( msg_type_string )
 	{
@@ -323,25 +324,11 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 					app_connection->most_recent_pause_timestamp = time(NULL);
 					
 					char response[LWS_PRE+64];
-					strcpy(response+LWS_PRE, "{\"t\":\"pause\",\"status\":1}");
+					strcpy( response+LWS_PRE, "{\"t\":\"pause\",\"status\":1}");
 					DEBUG("Response: %s\n", response+LWS_PRE);
-					lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
-					/*
-					FQEntry *en = FCalloc( 1, sizeof( FQEntry ) );
-					if( en != NULL )
-					{
-						en->fq_Data = FMalloc( 64+LWS_SEND_BUFFER_PRE_PADDING+LWS_SEND_BUFFER_POST_PADDING );
-						memcpy( en->fq_Data+LWS_SEND_BUFFER_PRE_PADDING, "{\"t\":\"pause\",\"status\":1}", 24 );
-						en->fq_Size = LWS_PRE+64;
-						
-						DEBUG("[websocket_app_callback] Msg to send: %s\n", en->fq_Data+LWS_SEND_BUFFER_PRE_PADDING );
-			
-						FRIEND_MUTEX_LOCK(&_session_removal_mutex);
-						FQPushFIFO( &(man->man_Queue), en );
-						FRIEND_MUTEX_UNLOCK(&_session_removal_mutex);
-						lws_callback_on_writable( wsi );
-					}
-					*/
+					//lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
+					
+					WriteMessage( app_connection, (unsigned char*)response+LWS_PRE, 64 );
 				}
 				while (0);
 			break;
@@ -356,23 +343,8 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 					char response[LWS_PRE+64];
 					strcpy(response+LWS_PRE, "{\"t\":\"resume\",\"status\":1}");
 					DEBUG("Response: %s\n", response+LWS_PRE);
-					lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
-					/*
-					FQEntry *en = FCalloc( 1, sizeof( FQEntry ) );
-					if( en != NULL )
-					{
-						en->fq_Data = FMalloc( 64+LWS_SEND_BUFFER_PRE_PADDING+LWS_SEND_BUFFER_POST_PADDING );
-						memcpy( en->fq_Data+LWS_SEND_BUFFER_PRE_PADDING, "{\"t\":\"resume\",\"status\":1}", 25 );
-						en->fq_Size = LWS_PRE+64;
-						
-						DEBUG("[websocket_app_callback] Msg to send1: %s\n", en->fq_Data+LWS_SEND_BUFFER_PRE_PADDING );
-			
-						FRIEND_MUTEX_LOCK(&_session_removal_mutex);
-						FQPushFIFO( &(man->man_Queue), en );
-						FRIEND_MUTEX_UNLOCK(&_session_removal_mutex);
-						lws_callback_on_writable( wsi );
-					}
-					*/
+					//lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
+					WriteMessage( app_connection, (unsigned char*)response+LWS_PRE, 64 );
 				}
 				while (0);
 			break;
@@ -385,18 +357,19 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 				char response[LWS_PRE+128];
 				snprintf( response+LWS_PRE, 128, "{\"t\":\"pong\",\"time\":%s}", ping );
 				DEBUG("Response: %s\n", response+LWS_PRE);
-				lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
+				//lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
+				WriteMessage( app_connection, (unsigned char*)response+LWS_PRE, 128 );
 				break;
 
 			default:
-				return MobileAppReplyError(wsi, MOBILE_APP_ERR_WRONG_TYPE);
+				return MobileAppReplyError( wsi, MOBILE_APP_ERR_WRONG_TYPE );
 			}
 
 		}
 	}
 	else
 	{
-		return MobileAppReplyError(wsi, MOBILE_APP_ERR_NO_TYPE);
+		return MobileAppReplyError( wsi, MOBILE_APP_ERR_NO_TYPE );
 	}
 
 	return 0; //should be unreachable
@@ -411,24 +384,20 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 static int MobileAppReplyError(struct lws *wsi, int error_code)
 {
 	char response[LWS_PRE+32];
-	snprintf(response+LWS_PRE, sizeof(response)-LWS_PRE, "{ \"t\":\"error\", \"status\":%d}", error_code);
+	snprintf( response+LWS_PRE, sizeof(response)-LWS_PRE, "{\"t\":\"error\",\"status\":%d}", error_code);
 	DEBUG("Error response: %s\n", response+LWS_PRE);
 
-	DEBUG("WSI %p\n", wsi);
+	if( error_code != MOBILE_APP_ERR_NO_SESSION_ON_CLOSED )
 	{
-		FQEntry *en = FCalloc( 1, sizeof( FQEntry ) );
-		if( en != NULL )
+		char *websocketHash = MobileAppGetWebsocketHash( wsi );
+		if( websocketHash != NULL )
 		{
-			en->fq_Data = FMalloc( 64+LWS_SEND_BUFFER_PRE_PADDING+LWS_SEND_BUFFER_POST_PADDING );
-			memcpy( en->fq_Data+LWS_SEND_BUFFER_PRE_PADDING, "{\"t\":\"keepalive\",\"status\":1}", 28 );
-			en->fq_Size = LWS_PRE+64;
-
-			FQPushFIFO( &(user_connections->connection[i]->mac_Queue), en );
-			lws_callback_on_writable( user_connections->connection[i]->mac_WebsocketPtr );
-			//FQPushFIFO( &(man->man_Queue), en );
-			//lws_callback_on_writable( user_connections->connection[i]->websocket_ptr );
+			MobileAppConnectionT *appConnection = HashmapGetData(_websocket_to_user_connections_map, websocketHash );
+			if( appConnection != NULL )
+			{
+				WriteMessage( appConnection, (unsigned char *)response+LWS_PRE, 32 );
+			}
 		}
-	}
 	//
 	// This will not work here
 	//
@@ -436,17 +405,18 @@ static int MobileAppReplyError(struct lws *wsi, int error_code)
 	/*
 	static inline int WriteMessage( struct MobileAppConnectionS *mac, unsigned char *msg, int len )
 	 */
+	}
 
-	char *websocket_hash = MobileAppGetWebsocketHash( wsi );
-	MobileAppConnectionT *app_connection = HashmapGetData(_websocket_to_user_connections_map, websocket_hash);
-	FFree(websocket_hash);
-	if( app_connection )
+	char *websocketHash = MobileAppGetWebsocketHash( wsi );
+	MobileAppConnectionT *appConnection = HashmapGetData(_websocket_to_user_connections_map, websocketHash );
+	FFree( websocketHash );
+	if( appConnection )
 	{
 		DEBUG("Cleaning up before closing socket\n");
-		UserMobileAppConnectionsT *user_connections = app_connection->user_connections;
-		unsigned int connection_index = app_connection->user_connection_index;
+		UserMobileAppConnectionsT *userConnections = appConnection->user_connections;
+		unsigned int connection_index = appConnection->user_connection_index;
 		DEBUG("Removing connection %d for user <%s>\n", connection_index, user_connections->username);
-		MobileAppRemoveAppConnection(user_connections, connection_index);
+		MobileAppRemoveAppConnection( userConnections, connection_index);
 	}
 
 	return -1;
@@ -461,9 +431,9 @@ static int MobileAppReplyError(struct lws *wsi, int error_code)
  */
 static int MobileAppHandleLogin( struct lws *wsi, json_t *json )
 {
-	char *username_string = json_get_element_string( json, "user" );
+	char *usernameString = json_get_element_string( json, "user" );
 
-	if( username_string == NULL )
+	if( usernameString == NULL )
 	{
 		return MobileAppReplyError(wsi, MOBILE_APP_ERR_LOGIN_NO_USERNAME);
 	}
@@ -476,10 +446,10 @@ static int MobileAppHandleLogin( struct lws *wsi, json_t *json )
 	}
 
 	//step 3 - check if the username and password is correct
-	DEBUG("Login attempt <%s> <%s>\n", username_string, password_string);
+	DEBUG("Login attempt <%s> <%s>\n", usernameString, password_string);
 
 	unsigned long block_time = 0;
-	User *user = UMGetUserByNameDB( SLIB->sl_UM, username_string);
+	User *user = UMGetUserByNameDB( SLIB->sl_UM, usernameString );
 
 	AuthMod *a = SLIB->AuthModuleGet( SLIB );
 
@@ -491,7 +461,7 @@ static int MobileAppHandleLogin( struct lws *wsi, json_t *json )
 	else
 	{
 		DEBUG("Check = true\n");
-		return MobileAppAddNewUserConnection( wsi, username_string, user );
+		return MobileAppAddNewUserConnection( wsi, usernameString, user );
 	}
 }
 
@@ -510,7 +480,7 @@ static void* MobileAppPingThread( void *a __attribute__((unused)) )
 	{
 		DEBUG("Checking app communication times\n");
 
-		int users_count = HashmapLength(_user_to_app_connections_map);
+		int users_count = HashmapLength( _user_to_app_connections_map s);
 		bool check_okay = true;
 
 		unsigned int index = 0;
