@@ -299,10 +299,10 @@ int ProcessIncomingRequest( struct lws *wsi, char *data, size_t len, void *udata
 	jsmn_init( &parser );
 	jsmntok_t t[32]; //should be enough
 
-	int tokens_found = jsmn_parse( &parser, data, len, t, sizeof(t)/sizeof(t[0]) );
+	int tokensFound = jsmn_parse( &parser, data, len, t, sizeof(t)/sizeof(t[0]) );
 	
-	DEBUG( "Token found: %d", tokens_found );
-	if( tokens_found < 1 )
+	DEBUG( "Token found: %d", tokensFound );
+	if( tokensFound < 1 )
 	{
 		return ReplyError(wsi, WS_NOTIF_SINK_ERROR_TOKENS_NOT_FOUND );
 	}
@@ -323,7 +323,7 @@ int ProcessIncomingRequest( struct lws *wsi, char *data, size_t len, void *udata
 	//	}
 	//}
 	
-	json_t json = { .string = data, .string_length = len, .token_count = tokens_found, .tokens = t };
+	json_t json = { .string = data, .string_length = len, .token_count = tokensFound, .tokens = t };
 	
 	if( t[0].type == JSMN_OBJECT ) 
 	{
@@ -449,7 +449,8 @@ int ProcessIncomingRequest( struct lws *wsi, char *data, size_t len, void *udata
 							char *application = NULL;
 							char *extra = NULL;
 							
-							for( p = 8 ; p < 25 ; p++ )
+							// 8 > 25
+							for( p = 8 ; p < tokensFound ; p++ )
 							{
 								int size = t[p].end - t[p].start;
 								if( strncmp( data + t[p].start, "notification_type", size) == 0) 
