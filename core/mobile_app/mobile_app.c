@@ -298,7 +298,7 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 	{
 		//due to uniqueness of "t" field values only first letter has to be evaluated
 		char firstTypeLetter = msg_type_string[0];
-		DEBUG("Type letter <%c>\n", first_type_letter);
+		DEBUG("Type letter <%c>\n", firstTypeLetter);
 
 		if( firstTypeLetter == 'l'/*login*/)
 		{
@@ -447,7 +447,7 @@ static int MobileAppHandleLogin( struct lws *wsi, json_t *json )
 	}
 
 	//step 3 - check if the username and password is correct
-	DEBUG("Login attempt <%s> <%s>\n", usernameString, password_string);
+	DEBUG("Login attempt <%s> <%s>\n", usernameString, passwordString);
 
 	unsigned long blockTime = 0;
 	User *user = UMGetUserByNameDB( SLIB->sl_UM, usernameString );
@@ -636,7 +636,7 @@ static int MobileAppAddNewUserConnection( struct lws *wsi, const char *username,
 		if( userConnections->connection[i] == NULL )
 		{ //got empty slot
 			         connectionToReplaceIndex = i;
-			DEBUG("Will use slot %d for this connection\n", connection_to_replace_index);
+			DEBUG("Will use slot %d for this connection\n", connectionToReplaceIndex);
 			break;
 		}
 	}
@@ -655,7 +655,7 @@ static int MobileAppAddNewUserConnection( struct lws *wsi, const char *username,
 				{
 					               oldestTimestamp = userConnections->connection[i]->mac_LastCommunicationTimestamp;
 					               connectionToReplaceIndex = i;
-					DEBUG("Will drop old connection from slot %d (last comm %d)\n", connection_to_replace_index, oldest_timestamp);
+					DEBUG("Will drop old connection from slot %d (last comm %d)\n", connectionToReplaceIndex, oldestTimestamp);
 				}
 			}
 		}
@@ -666,7 +666,7 @@ static int MobileAppAddNewUserConnection( struct lws *wsi, const char *username,
 		MobileAppRemoveAppConnection( userConnections, connectionToReplaceIndex);
 	}
 
-	DEBUG("Adding connection to slot %d\n", connection_to_replace_index);
+	DEBUG("Adding connection to slot %d\n", connectionToReplaceIndex);
 	userConnections->connection[ connectionToReplaceIndex ] = newConnection;
 
 	newConnection->mac_UserData = user_data;
