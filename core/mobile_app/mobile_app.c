@@ -213,14 +213,18 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 				t[ e->fq_Size+1 ] = 0;
 
 				int res = lws_write( wsi, e->fq_Data+LWS_SEND_BUFFER_PRE_PADDING, e->fq_Size, LWS_WRITE_TEXT );
-				DEBUG("[websocket_app_callback] message sent: %s len %d\n", e->fq_Data, res );
+				DEBUG("[websocket_app_callback] message sent: %s lensend: %d len %d\n", e->fq_Data, e->fq_Size, res );
 
 				int ret = lws_send_pipe_choked( wsi );
 				
 				if( e != NULL )
 				{
 					DEBUG("Release: %p\n", e->fq_Data );
-					FFree( e->fq_Data );
+					if( e->fq_Data != NULL )
+					{
+						FFree( e->fq_Data );
+						e->fq_Data = NULL;
+					}
 					FFree( e );
 				}
 			}
@@ -518,6 +522,7 @@ static void* MobileAppPingThread( void *a __attribute__((unused)) )
 						
 						//MobileAppNotif *man = (MobileAppNotif *) user_connections->connection[i]->user_data;
 						//if( man != NULL )
+						/*
 						{
 							FQEntry *en = FCalloc( 1, sizeof( FQEntry ) );
 							if( en != NULL )
@@ -532,6 +537,7 @@ static void* MobileAppPingThread( void *a __attribute__((unused)) )
 								//lws_callback_on_writable( user_connections->connection[i]->websocket_ptr );
 							}
 						}
+						*/
 					}
 				}
 			} //end of user connection loops
@@ -686,6 +692,7 @@ static int MobileAppAddNewUserConnection( struct lws *wsi, const char *username,
 	lws_write(wsi, (unsigned char*)response+LWS_PRE, msgsize, LWS_WRITE_TEXT);
 	*/
 
+	/*
 	{
 		FQEntry *en = FCalloc( 1, sizeof( FQEntry ) );
 		if( en != NULL )
@@ -702,6 +709,7 @@ static int MobileAppAddNewUserConnection( struct lws *wsi, const char *username,
 			lws_callback_on_writable( wsi );
 		}
 	}
+	*/
 
 	return 0;
 }
@@ -740,7 +748,6 @@ static void  MobileAppRemoveAppConnection( UserMobileAppConnectionsT *connection
 	connectionIndex,
 	connections->connection[ connectionIndex ]->mac_LastCommunicationTimestamp);
 	
-
 	FQDeInitFree( &(connections->connection[connectionIndex]->mac_Queue) );
 
 	FFree( connections->connection[connectionIndex]->mac_SessionID );
