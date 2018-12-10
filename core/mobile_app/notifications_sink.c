@@ -449,8 +449,13 @@ int ProcessIncomingRequest( struct lws *wsi, char *data, size_t len, void *udata
 							char *application = NULL;
 							char *extra = NULL;
 							
+<<<<<<< HEAD
 							// 8 > 25
 							for( p = 8 ; p < tokensFound ; p++ )
+=======
+							// 8 -> 25
+							for( p = 8 ; p < tokens_found ; p++ )
+>>>>>>> b200f24ab2761cea8a83a2b50c9ffe863c4d6c65
 							{
 								int size = t[p].end - t[p].start;
 								if( strncmp( data + t[p].start, "notification_type", size) == 0) 

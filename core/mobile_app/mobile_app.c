@@ -353,6 +353,7 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 				}
 				while (0);
 			break;
+<<<<<<< HEAD
 			// ping
 			case 'e':
 				DEBUG("Ping from client\n");
@@ -364,6 +365,11 @@ int WebsocketAppCallback(struct lws *wsi, enum lws_callback_reasons reason, void
 				DEBUG("Response: %s\n", response+LWS_PRE);
 				//lws_write(wsi, (unsigned char*)response+LWS_PRE, strlen(response+LWS_PRE), LWS_WRITE_TEXT);
 				WriteMessage( appConnection, (unsigned char*)response+LWS_PRE, 128 );
+=======
+
+			case 'e': //echo
+				DEBUG("Echo from client\n");
+>>>>>>> b200f24ab2761cea8a83a2b50c9ffe863c4d6c65
 				break;
 
 			default:
