@@ -1,7 +1,7 @@
 # Egendefinerte innlegg er spesifikke for den bestemte stasjonen / disken
 # Merk at {i18n_connection_description} må skrives som en kontinuerlig tekststreng med html-formatering. Det kan ikke inneholde returrapportering
-i18n_drivename                     : IPFS disk
-i18n_connection_description        : Det interplanetære filsystemet (<strong> IPFS </ strong>) er en protokoll og et nettverk designet for å lage en innholdsrettbar, peer-to-peer-metode for lagring og deling av hypermedier i et distribuert filsystem.
+i18n_drivename                     : Samba
+i18n_connection_description        : Samba er en fri programvare-implementering av SMB-nettverksprotokollen. Samba tilbyr fil- og utskriftstjenester for ulike Microsoft Windows-klienter.
 
 # Hovedbeskrivelse Emner
 i18n_configuration_details         : Konfigurasjonsdetaljer

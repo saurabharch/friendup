@@ -1,7 +1,7 @@
 # Custom Entries are specific to the particular drive / disk
 # Note that {i18n_connection_description} needs to be typed as a continuous text string with html formating. It cannot contain carrage returns
-i18n_drivename                     : Corvo Disk
-i18n_connection_description        : The Corvo Disk driver allows you to mount a Corvo CRM as a disk.
+i18n_drivename                     : Samba
+i18n_connection_description        : Samba is a free software re-implementation of the SMB networking protocol. Samba provides file and print services for various Microsoft Windows clients.
 
 #Main Description Topics
 i18n_configuration_details         : Configuration Details
