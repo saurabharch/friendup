@@ -8478,7 +8478,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 				deviceID = friendApp.get_deviceid();
 			}
 
-			console.log('onReady called a bunch of friendApp functions with our sessionid ' + Workspace.sessionId );
+			//console.log('onReady called a bunch of friendApp functions with our sessionid ' + Workspace.sessionId );
 
 			if( appToken != null )	// old applications which do not have appToken will skip this part
 			{
@@ -8494,6 +8494,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 				l.execute( 'mobile/createuma', { sessionid: Workspace.sessionId, apptoken: appToken, deviceid: deviceID, appversion: version, platform: platform } );
 			}
 		}
+		return true;
 	}
 };
 
