@@ -290,6 +290,10 @@ if( $args->args->id > 0 )
 													$d->SortOrder = $i++;
 													$d->Save();
 												}
+												else
+												{
+													$i++;
+												}
 											}
 							
 											// 7. Pre-install applications
