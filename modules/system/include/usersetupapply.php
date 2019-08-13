@@ -242,89 +242,79 @@ if( $args->args->id > 0 )
 					if( $ug->Data->software )
 					{
 						// 4. Check dock!
-						
-						// TODO: Perhaps we should add the current list of dock items if there is any included with the software list for adding ...
-	
-						if( 1==1 || !( $row = $SqlDatabase->FetchObject( 'SELECT * FROM DockItem WHERE UserID=\'' . $uid . '\'' ) ) )
+						$i = 0;
+
+						foreach( $ug->Data->software as $r )
 						{
-							$i = 0;
-		
-							foreach( $ug->Data->software as $r )
+							if( $r[0] )
 							{
-								if( $r[0] )
+								// 5. Store applications
+			
+								if( $path = findInSearchPaths( $r[0] ) )
 								{
-									// 5. Store applications
-				
-									if( $path = findInSearchPaths( $r[0] ) )
+									if( file_exists( $path . '/Config.conf' ) )
 									{
-										if( file_exists( $path . '/Config.conf' ) )
+										$f = file_get_contents( $path . '/Config.conf' );
+										// Path is dynamic!
+										$f = preg_replace( '/\"Path[^,]*?\,/i', '"Path": "' . $path . '/",', $f );
+				
+										// Store application!
+										$a = new dbIO( 'FApplication' );
+										$a->UserID = $uid;
+										$a->Name = $r[0];
+										if( !$a->Load() )
 										{
-											$f = file_get_contents( $path . '/Config.conf' );
-											// Path is dynamic!
-											$f = preg_replace( '/\"Path[^,]*?\,/i', '"Path": "' . $path . '/",', $f );
+											$a->DateInstalled = date( 'Y-m-d H:i:s' );
+											$a->Config = $f;
+											$a->Permissions = 'UGO';
+											$a->DateModified = $a->DateInstalled;
+											$a->Save();
+										}
 					
-											// Store application!
-											$a = new dbIO( 'FApplication' );
-											$a->UserID = $uid;
-											$a->Name = $r[0];
-											if( !$a->Load() )
-											{
-												$a->DateInstalled = date( 'Y-m-d H:i:s' );
-												$a->Config = $f;
-												$a->Permissions = 'UGO';
-												$a->DateModified = $a->DateInstalled;
-												$a->Save();
-											}
+										// 6. Setup dock items
+					
+										if( $r[1] )
+										{
+											$d = new dbIO( 'DockItem' );
+											$d->Application = $r[0];
+											$d->UserID = $uid;
+											$d->Parent = 0;
+											
+											//do not duplicate
+											$d->Load();
+
+											$d->SortOrder = $i++;
+											$d->Save();
+										}
 						
-											// 6. Setup dock items
-						
-											if( $r[1] )
+										// 7. Pre-install applications
+					
+										if( $ug->Data->preinstall != '0' && $a->ID > 0 )
+										{
+											if( $a->Config && ( $cf = json_decode( $a->Config ) ) )
 											{
-												$d = new dbIO( 'DockItem' );
-												$d->Application = $r[0];
-												$d->UserID = $uid;
-												$d->Parent = 0;
-												if( !$d->Load() )
+												if( isset( $cf->Permissions ) && $cf->Permissions )
 												{
-													//$d->ShortDescription = $r[1];
-													$d->SortOrder = $i++;
-													$d->Save();
-												}
-												else
-												{
-													$i++;
-												}
-											}
-							
-											// 7. Pre-install applications
-						
-											if( $ug->Data->preinstall != '0' && $a->ID > 0 )
-											{
-												if( $a->Config && ( $cf = json_decode( $a->Config ) ) )
-												{
-													if( isset( $cf->Permissions ) && $cf->Permissions )
+													$perms = [];
+													foreach( $cf->Permissions as $p )
 													{
-														$perms = [];
-														foreach( $cf->Permissions as $p )
-														{
-															$perms[] = [$p,(strtolower($p)=='door all'?'all':'')];
-														}
+														$perms[] = [$p,(strtolower($p)=='door all'?'all':'')];
+													}
+							
+													// TODO: Get this from Config.ini in the future, atm set nothing
+													$da = new stdClass();
+													$da->domain = '';
 								
-														// TODO: Get this from Config.ini in the future, atm set nothing
-														$da = new stdClass();
-														$da->domain = '';
-									
-														// Collect permissions in a string
-														$app = new dbIO( 'FUserApplication' );
-														$app->ApplicationID = $a->ID;
-														$app->UserID = $a->UserID;
-														if( !$app->Load() )
-														{
-															$app->AuthID = md5( rand( 0, 9999 ) . rand( 0, 9999 ) . rand( 0, 9999 ) . $a->ID );
-															$app->Permissions = json_encode( $perms );
-															$app->Data = json_encode( $da );
-															$app->Save();
-														}
+													// Collect permissions in a string
+													$app = new dbIO( 'FUserApplication' );
+													$app->ApplicationID = $a->ID;
+													$app->UserID = $a->UserID;
+													if( !$app->Load() )
+													{
+														$app->AuthID = md5( rand( 0, 9999 ) . rand( 0, 9999 ) . rand( 0, 9999 ) . $a->ID );
+														$app->Permissions = json_encode( $perms );
+														$app->Data = json_encode( $da );
+														$app->Save();
 													}
 												}
 											}
@@ -333,6 +323,7 @@ if( $args->args->id > 0 )
 								}
 							}
 						}
+						
 					}
 				}
 				
