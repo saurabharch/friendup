@@ -193,17 +193,11 @@ body > div
 	margin: 0 5px 0 0;
 }
 
-.AppButton:first-child .AppButtonImage img
-{
-	margin-top: 17px;
-}
-
 .AppButtonImage
 {
 	width: 100%;
-	height: 96px;
+	height: 76px;
 	border-radius: 10px;
-	background-color: white;
 	text-align: center;
 }
 .Fun .AppButtonImage
@@ -215,6 +209,7 @@ body > div
 {
 	display: inline-block;
 	margin: 8px 0;
+	max-width:64px;
 }
 
 .AppButtonLabel
@@ -222,7 +217,7 @@ body > div
 	text-align: center;
 	width: 100%;
 	position: absolute;
-	top: 100px;
+	top: 80px;
 	font-size: 14px;
 }
 
