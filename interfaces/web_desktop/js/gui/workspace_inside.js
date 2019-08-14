@@ -1644,8 +1644,11 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 					}
 					if( dat.hiddensystem )
 					{
-						globalConfig.hiddenSystem = true; // dat.hiddensystem;
+						globalConfig.hiddenSystem = dat.hiddensystem;
 					}
+					
+					globalConfig.hiddenSystem = true;
+					
 					if( window.isMobile )
 					{
 						globalConfig.viewList = 'separate';
