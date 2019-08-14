@@ -83,7 +83,7 @@ var ScreenOverlay = {
 	showEula: function()
 	{
 		var d = document.createElement( 'div' );
-		d.className = 'EULA Loading';
+		d.className = 'SmoothScrolling EULA Loading';
 		this.div.appendChild( d );
 		var f = new File( 'System:templates/eula.html' );
 		f.onLoad = function( data )
