@@ -14,6 +14,7 @@ var ScreenOverlay = {
 	mode: false,
 	done: false,
 	debug: false,
+	eula: true,
 	list: [],
 	// Public methods ----------------------------------------------------------
 	init: function()
@@ -42,23 +43,69 @@ var ScreenOverlay = {
 	// Hide self
 	hide: function()
 	{
-		if( this.debug ) return;
 		var self = this;
-		if( !this.visibility ) return;
-		this.div.classList.add( 'Hiding' );
-		setTimeout( function()
+		if( this.debug ) return;
+		if( this.eula )
 		{
-			self.div.classList.remove( 'Showing' );
-			self.div.classList.remove( 'Hiding' );
+			var m = new Module( 'system' );
+			m.onExecuted = function( e, d )
+			{
+				if( e != 'ok' )
+				{
+					return self.showEula();
+				}
+				return theHider();
+			}
+			m.execute( 'getsetting', { setting: 'eula_accepted' } );
+			return;
+		}
+		function theHider()
+		{
+			if( !self.visibility ) return false;
+			self.div.classList.add( 'Hiding' );
 			setTimeout( function()
 			{
-				self.div.classList.add( 'Hidden' );
-				self.div.classList.remove( 'Visible' );
-				self.visibility = false; // Done hiding!
-				self.clearContent();
-				self.done = true;
+				self.div.classList.remove( 'Showing' );
+				self.div.classList.remove( 'Hiding' );
+				setTimeout( function()
+				{
+					self.div.classList.add( 'Hidden' );
+					self.div.classList.remove( 'Visible' );
+					self.visibility = false; // Done hiding!
+					self.clearContent();
+					self.done = true;
+				}, 250 );
 			}, 250 );
-		}, 250 );
+			return true;
+		}
+		return theHider();
+	},
+	showEula: function()
+	{
+		var d = document.createElement( 'div' );
+		d.className = 'EULA Loading';
+		this.div.appendChild( d );
+		var f = new File( 'System:templates/eula.html' );
+		f.onLoad = function( data )
+		{
+			d.innerHTML = data;
+			d.classList.remove( 'Loading' );
+		}
+		f.load();
+	},
+	acceptEula: function( mod )
+	{
+		var self = this;
+		if( !mod ) return;
+		var m = new Module( 'system' );
+		m.onExecuted = function( e, d )
+		{
+			if( e == 'ok' )
+			{
+				self.hide();
+			}
+		}
+		m.execute( 'setsetting', { setting: 'eula_accepted', data: 'accepted' } );
 	},
 	setMode: function( mode )
 	{
