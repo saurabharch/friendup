@@ -1644,7 +1644,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 					}
 					if( dat.hiddensystem )
 					{
-						globalConfig.hiddenSystem = dat.hiddensystem;
+						globalConfig.hiddenSystem = true; // dat.hiddensystem;
 					}
 					if( window.isMobile )
 					{
