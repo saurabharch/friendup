@@ -92,12 +92,13 @@ foreach( $paths as $path )
 			
 			$f = json_decode( file_get_contents( $path . $file . '/Config.conf' ) );
 			if( !$f ) continue;
-			if( isset( $f->HideInCatalog ) && $f->HideInCatalog == 'yes' ) continue;
+			if( $mode != 'showall' && isset( $f->HideInCatalog ) && $f->HideInCatalog == 'yes' ) continue;
 			
 		
 			$o = new stdClass();
 			$o->Name = str_replace( '_', ' ', $file );
-			if( ( !$metadata || !isset( $metadata->{$o->Name} ) ) && $level != 'Admin' ) continue;
+			//FRIENDSKY CHANGE
+			//if( ( !$metadata || !isset( $metadata->{$o->Name} ) ) && $level != 'Admin' ) continue;
 			$o->Preview = file_exists( $path . $file . '/preview.png' ) ? true : false;
 			$o->Category = $f->Category;
 			$o->Description = isset( $f->Description ) ? $f->Description : '';

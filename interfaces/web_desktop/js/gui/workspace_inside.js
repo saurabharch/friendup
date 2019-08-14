@@ -2980,19 +2980,8 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 											Workspace.upgradeWorkspaceSettings( function(){
 												setTimeout( function()
 												{
-													var n = Notify( 
-														{ 
-															title: 'Your Workspace has been upgraded', 
-															text: 'We have updated your settings to match the default profile of the latest update of Friend. This only happens on each major upgrade of the Friend Workspace.', 
-															sticky: true
-														}, 
-														false, 
-														function()
-														{
-															CloseNotification( n );
-														} 
-													);
-												}, 1000 );
+													ExecuteApplication('Welcome');
+												}, 3000 );
 											} );
 										}
 									}
