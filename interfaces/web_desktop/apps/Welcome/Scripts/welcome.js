@@ -53,11 +53,13 @@ Application.run = function( msg )
 
 function launch( app )
 {
-	Application.sendMessage( {
+	/* correct and nice, but doesnt work and we want a fix today...
+		Application.sendMessage( {
 		type: 'system',
 		command: 'executeapplication',
 		executable: app
-	} );
+	} );*/
+	parent.ExecuteApplication( app );
 };
 
 function nevershow()
