@@ -2965,7 +2965,10 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 									Workspace.redrawIcons();
 									
 									// Update locale for download applet
-									ge( 'Tray' ).downloadApplet.innerHTML = '<div class="BubbleInfo"><div>' + i18n( 'i18n_drag_files_to_download' ) + '.</div></div>';
+									if( ge( 'Tray' ) && ge( 'Tray' ).downloadApplet )
+									{
+										ge( 'Tray' ).downloadApplet.innerHTML = '<div class="BubbleInfo"><div>' + i18n( 'i18n_drag_files_to_download' ) + '.</div></div>';
+									}
 									
 									// New version of Friend?
 									if( Workspace.loginUsername != 'go' )
@@ -9146,6 +9149,11 @@ function AboutFriendUP()
 				// Add device ID
 				if( window.friendApp )
 				{
+					var ver = friendApp.get_version();
+					if( ver )
+					{
+						buildInfo += '    <div class="item"><span class="label">Mobile App Version</span><span class="value">'+ ver +'</span></div>';
+					}
 					var devId = friendApp.get_deviceid();
 					if( devId )
 					{
