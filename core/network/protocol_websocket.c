@@ -67,7 +67,7 @@ static int MAX_SIZE_WS_MESSAGE = WS_PROTOCOL_BUFFER_SIZE-2048;
  * Write data to websockets, inline function
  * If message is bigger then WS buffer then message is encoded, splitted and send
  *
- * @param wsi pointer to websocket structure
+ * @param wscdata pointer to websocket structure
  * @param msgptr pointer to message
  * @param msglen length of the messsage
  * @param type type of websocket message which will be send
@@ -305,13 +305,27 @@ int WebsocketWrite( UserSessionWebsocket *wsi, unsigned char *msgptr, int msglen
 						}
 					}
 					
+					/*
 					if( wsi->wusc_Data->wsc_Wsi != NULL && wsi->wusc_Data->wsc_Wsi != NULL )
 					{
 						lws_callback_on_writable( wsi->wusc_Data->wsc_Wsi );
 					}
+					*/
 					wsi->wusc_Data->wsc_InUseCounter--;
 				
 					FRIEND_MUTEX_UNLOCK( &(wsi->wusc_Data->wsc_Mutex) );
+					
+					if( wsi->wusc_Data != NULL )
+					{
+						if( FRIEND_MUTEX_LOCK( &(wsi->wusc_Data->wsc_Mutex) ) == 0 )
+						{
+							if( wsi->wusc_Data != NULL && wsi->wusc_Data->wsc_Wsi != NULL && wsi->wusc_Data->wsc_Wsi != NULL )
+							{
+								lws_callback_on_writable( wsi->wusc_Data->wsc_Wsi );
+							}
+							FRIEND_MUTEX_UNLOCK( &(wsi->wusc_Data->wsc_Mutex) );
+						}
+					}
 				}
 			}
 			
@@ -349,18 +363,60 @@ int WebsocketWrite( UserSessionWebsocket *wsi, unsigned char *msgptr, int msglen
 
 					DEBUG("In use counter %d\n", wsi->wusc_Data->wsc_InUseCounter );
 				
+					/*
 					if( wsi->wusc_Data != NULL && wsi->wusc_Data->wsc_Wsi != NULL )
 					{
 						lws_callback_on_writable( wsi->wusc_Data->wsc_Wsi );
 					}
+					*/
 					wsi->wusc_Data->wsc_InUseCounter--;
 				}
 				FRIEND_MUTEX_UNLOCK( &(wsi->wusc_Data->wsc_Mutex) );
+				
+				if( wsi->wusc_Data != NULL )
+				{
+					if( FRIEND_MUTEX_LOCK( &(wsi->wusc_Data->wsc_Mutex) ) == 0 )
+					{
+						if( wsi->wusc_Data != NULL && wsi->wusc_Data->wsc_Wsi != NULL && wsi->wusc_Data->wsc_Wsi != NULL )
+						{
+							lws_callback_on_writable( wsi->wusc_Data->wsc_Wsi );
+						}
+						FRIEND_MUTEX_UNLOCK( &(wsi->wusc_Data->wsc_Mutex) );
+					}
+				}
 			}
 		}
 	}
 
 	return retval;
+}
+
+/**
+ * Release WSThread data
+ **/
+
+void releaseWSData( WSThreadData *data )
+{
+	Http *http = data->http;
+	BufString *queryrawbs = data->queryrawbs;
+	if( http != NULL )
+	{
+		UriFree( http->uri );
+		
+		if( http->rawRequestPath != NULL )
+		{
+			FFree( http->rawRequestPath );
+			http->rawRequestPath = NULL;
+		}
+		HttpFree( http );
+	}
+	
+	FFree( data->requestid );
+	FFree( data->path );
+	
+	BufStringDelete( queryrawbs );
+	
+	FFree( data );
 }
 
 /**
@@ -385,6 +441,7 @@ void WSThread( void *d )
 	WSCData *fcd = data->fcd;
 	if( fcd->wsc_Wsi == NULL )
 	{
+		releaseWSData( data );
 		return;
 	}
 	
@@ -398,24 +455,7 @@ void WSThread( void *d )
 	if( fcd->wsc_Wsi == NULL || fcd->wsc_UserSession == NULL )
 	{
 		FERROR("Error session is NULL\n");
-		if( http != NULL )
-		{
-			UriFree( http->uri );
-			
-			if( http->rawRequestPath != NULL )
-			{
-				FFree( http->rawRequestPath );
-				http->rawRequestPath = NULL;
-			}
-			HttpFree( http );
-		}
-		
-		FFree( data->requestid );
-		FFree( data->path );
-		
-		BufStringDelete( queryrawbs );
-		
-		FFree( data );
+		releaseWSData( data );
 		
 		//DECREASE_WS_THREADS();
 		
@@ -451,24 +491,8 @@ void WSThread( void *d )
 		if( respcode == -666 )
 		{
 			INFO("Logout function called.");
-			if( http != NULL )
-			{
-				UriFree( http->uri );
+			releaseWSData( data );
 			
-				if( http->rawRequestPath != NULL )
-				{
-					FFree( http->rawRequestPath );
-					http->rawRequestPath = NULL;
-				}
-			}
-			
-			FFree( data->requestid );
-			FFree( data->path );
-
-			HttpFree( http );
-			BufStringDelete( queryrawbs );
-	
-			FFree( data );
 			HttpFree( response );
 			
 			DECREASE_WS_THREADS();
@@ -683,6 +707,8 @@ void WSThread( void *d )
 		Log( FLOG_INFO, "WS no response end LOCKTEST\n");
 	}
 	
+	releaseWSData( data );
+	/*
 	if( http != NULL )
 	{
 		UriFree( http->uri );
@@ -701,6 +727,7 @@ void WSThread( void *d )
 	BufStringDelete( queryrawbs );
 	
 	FFree( data );
+	*/
     
 	//DECREASE_WS_THREADS();
 	
@@ -828,7 +855,7 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 	
 	char *in = NULL;
 	
-	if( len > 0 )
+	if( tin != NULL && len > 0 )
 	{
 		DEBUG("Len: %lu\n", len );
 		if( ( in = FMalloc( len+128 ) ) != NULL )	// 16 should be ok
@@ -888,22 +915,32 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 			Log( FLOG_DEBUG, "[WS] Callback session before closed, in use: %d\n", fcd->wsc_InUseCounter );
 			//if( fcd->fcd_WSClient != NULL )
 			{
-				fcd->wsc_Wsi = NULL;
+				if( FRIEND_MUTEX_LOCK( &(fcd->wsc_Mutex) ) == 0 )
+				{
+					fcd->wsc_Wsi = NULL;
+					FRIEND_MUTEX_UNLOCK( &(fcd->wsc_Mutex) );
+				}
+				
 				int val = 0;
 				while( TRUE )
 				{
-					DEBUG("PROTOCOL_WS: Check in use %d wsiptr %p fcws ptr %p\n", fcd->wsc_InUseCounter, wsi, fcd );
+					Log( FLOG_DEBUG, "PROTOCOL_WS: Check in use %d wsiptr %p fcws ptr %p\n", fcd->wsc_InUseCounter, wsi, fcd );
 					if( fcd->wsc_InUseCounter <= 0 )
 					{
 						break;
 					}
 					if( val++ > 15 )
 					{
-						//break;
+						int i;
+						for( i=0 ; i < WS_CALLS_MAX ; i++ )
+						{
+							Log( FLOG_INFO, "POS: %d req: %s\n", fcd->wsc_DebugPos, fcd->wsc_DebugCalls[i] );
+						}
 						Log( FLOG_INFO, "Closeing WS connection\n");
+						break;
 					}
-					pthread_yield();
 					sleep( 1 );
+					pthread_yield();
 				}
 				DetachWebsocketFromSession( fcd );
 				
@@ -915,7 +952,7 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 				FQDeInitFree( &(fcd->wsc_MsgQueue) );
 				pthread_mutex_destroy( &(fcd->wsc_Mutex) );
 			}
-			INFO("[WS] Callback session closed\n");
+			Log( FLOG_DEBUG, "[WS] Callback session closed\n");
 
 		break;
 		
@@ -1649,6 +1686,10 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 										{
 											WorkerManagerRun( lsb->sl_WorkerManager,  WSThread, wstdata, http, "ProtocolWebsocket.c: line 1220" );
 										}
+									}
+									else
+									{
+										releaseWSData( wstdata );
 									}
 #endif
 
