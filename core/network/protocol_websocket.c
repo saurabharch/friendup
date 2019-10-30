@@ -1067,7 +1067,7 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 			//lws_rx_flow_control( fcd->fcd_WSClient->wc_Wsi, 0 );
 			
 			FQEntry *e = NULL;
-			while( TRUE )
+			//while( TRUE )
 			{
 				FRIEND_MUTEX_LOCK( &(fcd->wsc_Mutex) );
 				FQueue *q = &(fcd->wsc_MsgQueue);
@@ -1092,12 +1092,12 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 				else
 				{
 					FRIEND_MUTEX_UNLOCK( &(fcd->wsc_Mutex) );
-					break;
+					//break;
 				}
 			}
 			DEBUG("WS Writable END, wsi ptr %p fcwsptr %p\n", wsi, fcd );
 			
-			FLUSH_QUEUE();
+			//FLUSH_QUEUE();
 			
 			break;
 		
@@ -1143,13 +1143,13 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 		break;
 	}
 
-	/*
-	if( user != NULL && fcd->wsc_Wsi != NULL )//&& fcd != NULL && reason != LWS_CALLBACK_CLOSED )
+	
+	if( user != NULL && fcd != NULL && fcd->wsc_Wsi != NULL && reason != LWS_CALLBACK_CLOSED )
 	{
 		DEBUG("fcd->wsc_Wsi %p\n", fcd->wsc_Wsi );
 		FLUSH_QUEUE();
 	}
-	*/
+	
 	DEBUG("END of callback\n");
 	
 	DECREASE_WS_THREADS();
