@@ -4771,6 +4771,10 @@ var View = function( args )
 	}
 	this.parseFlags = function( flags, filter )
 	{
+		console.log( 'parseFlags', {
+			flags  : flags,
+			filter : filter,
+		});
 		if( !this.flags ) this.flags = {};
 		for( var a in flags )
 		{
