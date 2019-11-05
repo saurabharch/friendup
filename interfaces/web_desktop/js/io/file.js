@@ -189,6 +189,7 @@ File = function( filename )
 		}
 
 		// Check progdir on path
+		var originalFilename = filename;
 		if( filename )
 		{
 			filename = this.resolvePath( filename );
@@ -198,6 +199,16 @@ File = function( filename )
 		var theDoor = Workspace.getDoorByPath( filename );
 		if( theDoor )
 		{
+			// Non dormant?
+			if( !theDoor.dormantDoor )
+			{
+				console.log( 'Using cached loader for ' + filename + '.' );
+				if( this.cachedLoader( filename, originalFilename ) )
+				{
+					return;
+				}
+			}
+			
 			// Copy vars
 			for( var a in this.vars )
 			{
@@ -329,6 +340,29 @@ File = function( filename )
 			}
 			jax.send();
 		}
+	}
+	
+	// Try to load a static file with cache via an iframe
+	this.cachedLoader = function( path, originalFilename )
+	{
+		var self = this;
+		var last = originalFilename.split( '.' ); last = last[ last.length - 1 ].toLowerCase();
+		if( last == 'html' || last == 'htm' || last == 'lang' || last == 'info' )
+		{
+			var ifr = document.createElement( 'iframe' );
+			ifr.style.pointerEvents = 'none';
+			ifr.style.visibility = 'hidden';
+			ifr.src = '/system.library/file/read?path=' + path + '&sessionid=' + Workspace.sessionId + '&mode=r';
+			ifr.onload = function()
+			{
+				if( self.onLoad )
+					self.onLoad( ifr.contentDocument.body.innerHTML );
+				document.body.removeChild( ifr );
+			}
+			document.body.appendChild( ifr );
+			return true;
+		}
+		return false;
 	}
 	
 	// Stores a file in cache
