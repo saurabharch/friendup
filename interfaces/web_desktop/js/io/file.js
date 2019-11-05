@@ -163,7 +163,9 @@ File = function( filename )
 		// Check cache
 		var p = this.path;
 		if( this.application )
-			p += ':' + this.application;
+		{
+			p += ':' + this.application.applicationName;
+		}
 		var d = friendUP.io.fileCacheIndex[ p ];
 		if( d )
 		{
@@ -332,21 +334,29 @@ File = function( filename )
 	// Stores a file in cache
 	this.cache = function( path, data )
 	{
-		if( friendUP.io.fileCacheMaxSize < 0 || friendUP.io.fileCacheSize < friendUP.io.fileCacheMaxSize )
+		var last = path.split( '.' ); last = last[ last.length - 1 ].toLowerCase();
+		if( last == 'html' || last == 'htm' || last == 'lang' || last == 'info' )
 		{
-			if( this.application )
-				path += ':' + this.application;
+			if( friendUP.io.fileCacheMaxSize < 0 || friendUP.io.fileCacheSize < friendUP.io.fileCacheMaxSize )
+			{
+				if( this.application )
+					path += ':' + this.application.applicationName;
 			
-			window.localStorage.setItem( 'iocache_' + path, data );
-			friendUP.io.fileCacheSize += data.length;
-			friendUP.io.fileCacheIndex[ path ] = true;
-			window.localStorage.setItem( 'FileCacheSize', friendUP.io.fileCacheSize );
-			window.localStorage.setItem( 'FileCacheIndex', friendUP.io.fileCacheIndex );
-			console.log( '[File] Added file to cache, size ' + data.length + ' and total cache size ' + friendUP.io.fileCacheSize );
+				window.localStorage.setItem( 'iocache_' + path, data );
+				friendUP.io.fileCacheSize += data.length;
+				friendUP.io.fileCacheIndex[ path ] = true;
+				window.localStorage.setItem( 'FileCacheSize', friendUP.io.fileCacheSize );
+				window.localStorage.setItem( 'FileCacheIndex', friendUP.io.fileCacheIndex );
+				console.log( '[File] Added file to cache, size ' + data.length + ' and total cache size ' + friendUP.io.fileCacheSize );
+			}
+			else
+			{
+				console.log( '[File] File cache is full (' + friendUP.io.fileCacheSize + ')' );
+			}
 		}
 		else
 		{
-			console.log( '[File] File cache is full (' + friendUP.io.fileCacheSize + ')' );
+			console.log( '[File] Wrong file type for cache: ' + last );
 		}
 	}
 
