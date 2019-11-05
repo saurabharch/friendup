@@ -10,10 +10,28 @@
 
 var friendUP = window.friendUP;
 friendUP.io = friendUP.io || {};
+friendUP.io.fileCacheSize  = parseInt( window.localStorage.getItem( 'FileCacheSize' ) ) || 0;
+friendUP.io.fileCacheIndex = window.localStorage.getItem( 'FileCacheIndex' ) || {};
+if( typeof( friendUP.io.fileCacheIndex ) == 'string' )
+{
+	try
+	{
+		friendUP.io.fileCacheIndex = JSON.parse( friendUP.io.fileCacheIndex );
+	}
+	catch( e )
+	{
+		friendUP.io.fileCacheIndex = {};
+		friendUP.io.fileCacheSize = 0;
+	}
+}
+friendUP.io.fileCacheMaxSize = -1;
+
+console.log( '[File] File index: ', friendUP.io.fileCacheIndex );
 
 // Simple file class
 File = function( filename )
 {
+	console.log( '[File] Getting ' + filename );
 	this.path = filename;
 
 	this.useEncryption = false; // Default no encryption
@@ -142,6 +160,21 @@ File = function( filename )
 	// Load data
 	this.load = function( mode )
 	{
+		// Check cache
+		var p = this.path;
+		if( this.application )
+			p += ':' + this.application;
+		var d = friendUP.io.fileCacheIndex[ p ];
+		if( d )
+		{
+			d = window.localStorage.getItem( 'iocache_' + p );
+			if( d )
+			{
+				console.log( '[File] Found local cache of ' + p );
+				return this.onLoad( d );
+			}
+		}
+		
 		var t = this;
 		var jax = new cAjax ();
 
@@ -199,6 +232,7 @@ File = function( filename )
 
 				if( typeof ( t.onLoad ) != 'undefined' )
 				{
+					t.cache( t.path, data );
 					t.onLoad( data );
 				}
 			}
@@ -257,6 +291,7 @@ File = function( filename )
 
 					if( typeof ( t.onLoad ) != 'undefined' )
 					{
+						t.cache( t.path, t.data );
 						t.onLoad( t.data );
 					}
 				}
@@ -271,6 +306,7 @@ File = function( filename )
 							for( var a in t.replacements )
 								t.rawdata = t.rawdata.split ( '{'+a+'}' ).join ( t.replacements[a] );
 						}
+						t.cache( t.path, t.rawdata );
 						t.onLoad( t.rawdata );
 					}
 				}
@@ -290,6 +326,27 @@ File = function( filename )
 				}
 			}
 			jax.send();
+		}
+	}
+	
+	// Stores a file in cache
+	this.cache = function( path, data )
+	{
+		if( friendUP.io.fileCacheMaxSize < 0 || friendUP.io.fileCacheSize < friendUP.io.fileCacheMaxSize )
+		{
+			if( this.application )
+				path += ':' + this.application;
+			
+			window.localStorage.setItem( 'iocache_' + path, data );
+			friendUP.io.fileCacheSize += data.length;
+			friendUP.io.fileCacheIndex[ path ] = true;
+			window.localStorage.setItem( 'FileCacheSize', friendUP.io.fileCacheSize );
+			window.localStorage.setItem( 'FileCacheIndex', friendUP.io.fileCacheIndex );
+			console.log( '[File] Added file to cache, size ' + data.length + ' and total cache size ' + friendUP.io.fileCacheSize );
+		}
+		else
+		{
+			console.log( '[File] File cache is full (' + friendUP.io.fileCacheSize + ')' );
 		}
 	}
 
