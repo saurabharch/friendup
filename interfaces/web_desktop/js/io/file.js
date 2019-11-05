@@ -227,8 +227,8 @@ File = function( filename )
 					{
 						// TODO: Is this wise? We don't want to show the ok stuff..
 						if( data.substr( 0, 17 ) == 'ok<!--separate-->' )
-							data = "";
-					} else data = "";
+							data = data.substr( 17, data.length - 17 );
+					} else data = '';
 					
 					if( t.replacements )
 					{
@@ -356,7 +356,12 @@ File = function( filename )
 			ifr.onload = function()
 			{
 				if( self.onLoad )
-					self.onLoad( ifr.contentDocument.body.innerHTML );
+				{
+					var data = ifr.contentDocument.body.innerHTML;
+					if( data.substr( 0, 17 ) == 'ok<!--separate-->' )
+						data = data.substr( 17, data.length - 17 );
+					self.onLoad( data );
+				}
 				document.body.removeChild( ifr );
 			}
 			document.body.appendChild( ifr );
