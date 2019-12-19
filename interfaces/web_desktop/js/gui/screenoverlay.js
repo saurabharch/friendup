@@ -88,7 +88,16 @@ var ScreenOverlay = {
 			self.div.classList.add( 'Hiding' );
 			setTimeout( function()
 			{
-
+				self.div.classList.remove( 'Showing' );
+				self.div.classList.remove( 'Hiding' );
+				setTimeout( function()
+				{
+					self.div.classList.add( 'Hidden' );
+					self.div.classList.remove( 'Visible' );
+					self.visibility = false; // Done hiding!
+					self.clearContent();
+					self.done = true;
+				}, 250 );
 				self.div.classList.add( 'Hidden' );
 				self.div.classList.remove( 'Visible' );
 				self.visibility = false; // Done hiding!
@@ -106,10 +115,8 @@ var ScreenOverlay = {
 					}
 				}, 1000 );
 				
-				
 				// Make sure we update screen title and tray/tasks
 				PollTaskbar();
-
 			}, 250 );
 			return true;
 		}
