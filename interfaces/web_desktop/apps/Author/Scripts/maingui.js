@@ -51,7 +51,6 @@ var filebrowserCallbacks = {
 	{
 		
 	},
-	// Click to open a folder
 	folderOpen( ele, e )
 	{
 		if( isMobile && currentViewMode != 'root' ) return;
@@ -60,35 +59,33 @@ var filebrowserCallbacks = {
 		Application.fileSaved = false;
 		Application.lastSaved = 0;
 		Application.currentDocument = null;
-		Application.refreshFilePane( isMobile ? false : 'findFirstFile', false, function( items )
+		
+		if( e )
 		{
-			// Are we refreshing the root dir?
-			var isRootDir = Application.fileBrowser.rootPath == ele;
-			for( var a = 0; a < items.length; a++ )
+			Application.refreshFilePane( isMobile ? false : 'findFirstFile', false, function()
 			{
-				// If it has directory, just wait
-				if( !isRootDir && isMobile && items[a].Type == 'Directory' )
-				{
-					return;
-				}
-			}
-			currentViewMode = 'files';
-			Application.updateViewMode();
-		} );
-		cancelBubble( e );
+				currentViewMode = 'files';
+				Application.updateViewMode();
+			} );
+			cancelBubble( e );
+		}
 	},
-	// Click to close a folder
 	folderClose( ele, e )
 	{
 		if( isMobile && currentViewMode != 'root' ) return;
+		
 		Application.currentDocument = null;
 		Application.browserPath = ele;
-		Application.refreshFilePane( isMobile ? false : 'findFirstFile', false, function()
+		
+		if( e )
 		{
-			currentViewMode = 'files';
-			Application.updateViewMode();
-		} );	
-		cancelBubble( e );
+			Application.refreshFilePane( isMobile ? false : 'findFirstFile', false, function()
+			{
+				currentViewMode = 'files';
+				Application.updateViewMode();
+			} );	
+			cancelBubble( e );
+		}
 	}
 };
 
@@ -148,8 +145,7 @@ Application.updateViewMode = function()
 			break;
 		case 'files':
 			ge( 'LeftBar' ).style.transform = 'translate3d(-100%,0,0)';
-			if( this.fld )
-				this.fld.style.transform = 'translate3d(-100%,0,0)';
+			this.fld.style.transform = 'translate3d(-100%,0,0)';
 			ge( 'FileBar' ).style.transform = 'translate3d(0%,0,0)';
 			ge( 'RightBar' ).style.transform = 'translate3d(100%,0,0)';
 			if( isMobile )
@@ -165,8 +161,7 @@ Application.updateViewMode = function()
 			break;
 		default:
 			ge( 'LeftBar' ).style.transform = 'translate3d(-100%,0,0)';
-			if( this.fld )
-				this.fld.style.transform = 'translate3d(-100%,0,0)';
+			this.fld.style.transform = 'translate3d(-100%,0,0)';
 			ge( 'FileBar' ).style.transform = 'translate3d(-100%,0,0)';
 			ge( 'RightBar' ).style.transform = 'translate3d(0%,0,0)';
 			this.sendMessage( {
@@ -182,18 +177,12 @@ Application.refreshFilePane = function( method, force, callback )
 {
 	if( !method ) method = false;
 	
-	if( Application.fileBrowser.flags.path.split( '/' ).length > 2 )
-	{
-		Application.fld.classList.add( 'Hidden' );
-	}
-	else
-	{
-		Application.fld.classList.remove( 'Hidden' );
-	}
-	
 	var d = new Door( Application.browserPath );
 	
 	var self = this;
+	
+	// Already showing (mobile only)!
+	if( isMobile && Application.path == Application.browserPath && !force ) return;
 	
 	Application.path = Application.browserPath;
 	var p = Application.path;
@@ -226,7 +215,7 @@ Application.refreshFilePane = function( method, force, callback )
 			// Make an "add new note" button
 			fBar.add = document.createElement( 'div' );
 			fBar.add.className = 'NewItem';
-			fBar.add.innerHTML = '<div class="Button IconButton IconSmall fa-plus">&nbsp;' + i18n( 'i18n_add_note' ) + '</div>';
+			fBar.add.innerHTML = '<div class="Button IconButton IconSmall fa-plus">&nbsp;' + i18n( 'i18n_new_document' ) + '</div>';
 			fBar.add.onclick = function()
 			{
 				var testFile = 'unnamed';
@@ -567,7 +556,7 @@ Application.run = function( msg, iface )
 	this.newLine = true;
 	this.initCKE();
 	
-	this.browserPath = 'Home:Notes/';
+	this.browserPath = 'Mountlist:';
 	
 	this.sessionObject.currentZoom = '100%';
 	
@@ -592,52 +581,10 @@ Application.run = function( msg, iface )
 		}, 250 );
 	}
 	
-	var FileBrowser = new Friend.FileBrowser( ge( 'LeftBar' ), { displayFiles: true, path: 'Home:Notes/', bookmarks: false, rootPath: 'Home:Notes/' }, filebrowserCallbacks );
+	var FileBrowser = new Friend.FileBrowser( ge( 'LeftBar' ), { displayFiles: true }, filebrowserCallbacks );
 	FileBrowser.render();
 	this.fileBrowser = FileBrowser;
 	
-	// Make an "add new folder" button
-	this.fld = document.createElement( 'div' );
-	if( isMobile )
-	{
-		this.fld.style.transform = '-100%';
-		this.fld.style.transition = 'transform 0.25s';
-	}
-	this.fld.className = 'NewFolder BackgroundHeavier';
-	this.fld.innerHTML = '<div class="Button IconButton IconSmall fa-folder">&nbsp;' + i18n( 'i18n_add_folder' ) + '</div>';
-	this.fld.onclick = function( e )
-	{
-		var el = document.createElement( 'input' );
-		el.type = 'text';
-		el.className = 'FullWidth InputHeight';
-		el.placeholder = 'foldername';
-		ge( 'LeftBar' ).appendChild( el );
-		el.select();
-		el.focus();
-		el.onkeydown = function( e )
-		{
-			var w = e.which ? e.which : e.keyCode;
-			if( w == 27 )
-			{
-				el.parentNode.removeChild( el );
-			}
-			else if( w == 13 )
-			{
-				var l = new Library( 'system.library' );
-				l.onExecuted = function()
-				{
-					self.fileBrowser.refresh();
-				}
-				l.execute( 'file/makedir', { path: Application.path + this.value } );
-			}
-		}
-		el.blur = function()
-		{
-			el.parentNode.removeChild( el );
-		}
-		return cancelBubble( e );
-	}
-	ge( 'LeftBar' ).parentNode.appendChild( this.fld );
 	
 	Application.updateViewMode();
 }
@@ -676,6 +623,14 @@ Application.initCKE = function()
 		.then( editor => {
 		
 			Application.editor = editor;
+			
+			// Check if there was a race condition
+			if( Application.loadedContentInQueue )
+			{
+				Application.editor.setData( Application.loadedContentInQueue );
+				Application.loadedContentInQueue = null;
+			}
+			
 			Application.initializeToolbar();
 			
 			editor.keystrokes.set( 'Ctrl+S', ( data, stop ) => {
@@ -1195,6 +1150,44 @@ Application.loadFile = function( path, cbk )
 	
 	switch( extension )
 	{
+		case 'doc':
+		case 'docx':
+		case 'odt':
+		case 'rtf':
+			var m = new Module( 'system' );
+			m.onExecuted = function( e, data )
+			{
+				if( e == 'ok' )
+				{					
+					Application.statusMessage( i18n( 'i18n_loaded' ) );
+					Application.editor.setData( data,
+						function()
+						{
+							Application.initializeBody();
+						}
+					);
+					ge( 'Printable' ).innerHTML = Application.editor.getData();
+					
+					// Remember content and top scroll
+					Application.sendMessage( { 
+						command: 'remembercontent', 
+						data: data,
+						path: path,
+						scrollTop: 0
+					} );
+					
+					Application.setCurrentDocument( path );
+				}
+				
+				// We got an error...
+				else
+				{
+					Application.statusMessage( i18n('i18n_failed_to_load_document') );
+				}	
+				Application.loading = false
+			}
+			m.execute( 'convertfile', { path: path, format: 'html', returnData: true } );
+			break;
 		default:
 			var f = new File( path );
 			f.onLoad = function( data )
@@ -1299,6 +1292,32 @@ Application.saveFile = function( path, content )
 	
 	switch( extension )
 	{
+		case 'doc':
+		case 'docx':
+		case 'odt':
+		case 'rtf':
+			Application.statusMessage( i18n('i18n_converting') );
+					
+			var m = new Module( 'system' );
+			m.onExecuted = function( e, data )
+			{
+				if( e == 'ok' )
+				{
+					Application.fileSaved = true;
+					Application.lastSaved = ( new Date() ).getTime();
+					Application.statusMessage( i18n('i18n_written') );
+					Application.currentDocument = path;
+					Application.refreshFilePane();
+				}
+				// We got an error...
+				else
+				{
+					Application.statusMessage( data );
+				}
+				Application.refreshFilePane();
+			}
+			m.execute( 'convertfile', { path: path, data: content, dataFormat: 'html', format: extension } );
+			break;
 		default:
 			var f = new File();
 			f.onSave = function()
@@ -1319,6 +1338,33 @@ Application.saveFile = function( path, content )
 		data: Application.editor.getData(),
 		scrollTop: Application.editor.element.scrollTop
 	} );
+}
+
+Application.print = function( path, content, callback )
+{
+	var v = new View( { title: i18n('i18n_print_preview'), width: 200, height: 100 } );
+	v.setContent( '<div class="Padding"><p><strong>' + i18n('i18n_generating_print_preview') + '</strong></p></div>' );
+	var m = new Module( 'system' );
+	m.onExecuted = function( e, data )
+	{
+		if( e == 'ok' )
+		{
+			Application.statusMessage( i18n('i18n_print_ready') );
+			
+			v.close();
+			
+			if( callback )
+			{
+				callback( data );
+			}
+		}
+		// We got an error...
+		else
+		{
+			Application.statusMessage( data );
+		}
+	}
+	m.execute( 'convertfile', { path: path, format: 'pdf' } );
 }
 
 Application.newDocument = function( args )
@@ -1375,7 +1421,14 @@ Application.newDocument = function( args )
 			}
 		}
 		
-		Application.editor.setData( args.content );
+		if( Application.editor )
+		{
+			Application.editor.setData( args.content );
+		}
+		else
+		{
+			Application.loadedContentInQueue = args.content;
+		}
 
 		if( args.scrollTop )
 		{
@@ -1564,6 +1617,17 @@ Application.receiveMessage = function( msg )
 				this.loadFile( msg.files[a].Path );
 				break;
 			}
+			break;
+		case 'print':
+			this.print( msg.path, '<!doctype html><html><head><title></title></head><body>' + Application.editor.getData() + '</body></html>', function( data )
+			{
+				var w = new View( {
+					title: i18n('i18n_print_preview') + ' ' + msg.path,
+					width: 700,
+					height: 800
+				} );
+				w.setContent( '<iframe style="margin: 0; width: 100%; height: 100%; position: absolute; top: 0; left: 0; border: 0" src="/system.library/file/read/?path=' + data + '&authid=' + Application.authId + '&mode=rb"></iframe><style>html, body{padding:0;margin:0}</style>' );
+			} );
 			break;
 		case 'savefile':
 			this.saveFile( msg.path, '<!doctype html><html><head><title></title></head><body>' + Application.editor.getData() + '</body></html>' );
