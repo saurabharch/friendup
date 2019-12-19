@@ -158,7 +158,16 @@ FriendWebSocket.prototype.connect = function()
 		{
 			self.cleanup();
 		}
-		self.ws = new window.WebSocket( self.url, 'FC-protocol' );
+		try
+		{
+			self.ws = new window.WebSocket( self.url, 'FC-protocol' );
+		}
+		catch( e2 )
+		{
+			console.log( '[coreSocket] Failed to connect.', h2 );
+			self.handleError( e2 );
+			return;
+		}
 	} 
 	catch( e )
 	{
@@ -290,6 +299,7 @@ FriendWebSocket.prototype.setState = function( type, data )
 		type: type,
 		data: data,
 	};
+	console.log( 'State: ', this.state );
 	if( this.onstate ) this.onstate( this.state );
 }
 
@@ -341,11 +351,11 @@ FriendWebSocket.prototype.handleSocketMessage = function( e )
 			//Notify( { title: i18n( 'i18n_session_killed' ), text: i18n( 'i18n_session_killed_desc' ) } );
 			// console.log( 'Test3: Session was killed!' );
 			this.handleClose();
-			/*
+			
 			setTimeout( function()
 			{
 				Workspace.logout();
-			}, 500 );*/
+			}, 500 );
 			return;
 		}
 		else if( msg.data.data == 'session timeout' )

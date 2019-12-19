@@ -73,6 +73,9 @@ i18n_find_workgroup_user             : Finn bruker...
 i18n_no_users_found                  : Ingen brukere funnet...
 i18n_error_in_userlist               : Feil i brukerlisten...
 i18n_apply_sharing_settings          : Sett endringene i kraft
+i18n_disk_visibility                 : Disk synlighet
+i18n_disk_visible                    : Synlig
+i18n_disk_invisible                  : Skjult
 
 i18n_driver_handled                  : DOS driver håndtert
 
@@ -192,6 +195,7 @@ i18n_favorites                          : Favoritter
 i18n_menu                               : Meny
 
 i18n_close_menu                         : Lukk meny
+i18n_delete_shortcut                    : Fjern snarvei
 
 menu_workspace                          : Workspace
 menu_system                             : System
@@ -319,6 +323,8 @@ menu_workspheres                        : Work Spheres
 i18n_worksphere_all                     : All Work Spheres
 i18n_worksphere_add                     : Add Work Sphere
 
+i18n_untitled_window                    : Vindu uten navn
+
 #Applications ------------------------------------------------------------------
 install_question_mintitle               : Installer program
 install_question_title                  : Program funnet, men ikke installert
@@ -438,6 +444,9 @@ i18n_drag_files_to_download             : Slipp filer for nedlastning.
 i18n_could_not_download                 : Kunne ikke laste ned
 i18n_download_wrong_type                : Kun filer kan lastes ned.
 
+i18n_illegal_path                       : Feil sti
+i18n_illegal_path_desc                  : Stien finnes ikke.
+
 #Colorpicker -------------------------------------------------------------------
 
 i18n_color_picker                       : Fargevelger
@@ -507,6 +516,8 @@ i18n_search_stop                        : Stopp søk
 i18n_search_type_Door                   : enhet
 i18n_search_type_Directory              : mappe
 i18n_search_type_File                   : fil
+i18n_search_in                          : i
+i18n_search_all_disks                   : Søk i alt
 
 #Directory view ----------------------------------------------------------------
 

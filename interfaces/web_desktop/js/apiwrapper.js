@@ -371,7 +371,7 @@ function apiWrapper( event, force )
 							};
 							if( tar )
 								tar.iframe.contentWindow.postMessage( JSON.stringify( nmsg ), '*' );
-							else 
+							else if( app.contentWindow ) 
 								app.contentWindow.postMessage( JSON.stringify( nmsg ), '*' );
 						}, msg.extra );
 						break;
@@ -1633,7 +1633,7 @@ function apiWrapper( event, force )
 									{
 										if( app.windows[ c ].parentViewId == msg.viewId )
 										{
-											app.windows[ c ].close(1);
+											app.windows[ c ].close( 1 );
 											continue;
 										}
 										out[ c ] = app.windows[ c ];
@@ -1701,6 +1701,7 @@ function apiWrapper( event, force )
 						case 'setFlags':
 							if( win )
 							{
+								console.log( '[apiwrapper] Got asked to set flags on view:', msg.data );
 								win.setFlags( msg.data );
 							}
 							break;
@@ -1819,13 +1820,19 @@ function apiWrapper( event, force )
 							{
 								if( win )
 								{
-									win.activate();
+									if( !app.startupsequence )
+									{
+										win.activate();
+									}
 								}
 								WorkspaceMenu.close();
 							}
 							else if( !( window.currentMovable && currentMovable.getAttribute( 'moving' ) == 'moving' ) )
 							{
-								win.activate();	
+								if( !app.startupsequence )
+								{
+									win.activate();	
+								}
 							}
 							break;
 					}
@@ -1855,6 +1862,19 @@ function apiWrapper( event, force )
 
 					var postTarget = app;
 					
+					console.log( '[apiwrapper] Opening a new view: ', msg.data );
+					
+					// Startup sequence apps need to be deactivated
+					if( app.startupsequence )
+					{						
+						msg.data.minimized = true;
+						// Fake hide when we have a window
+						if( Workspace.applications.length && Workspace.applications[0].windows && window.ScreenOverlay )
+						{
+							ScreenOverlay.invisible();
+						}
+					}
+					
 					var v = new View( msg.data );
 					var win = msg.parentViewId && app.windows ? app.windows[ msg.parentViewId ] : false;
 					if( win )
@@ -1864,7 +1884,7 @@ function apiWrapper( event, force )
 					}
 					
 					if( v.ready )
-					{
+					{	
 						if( !app.windows )
 							app.windows = [];
 						app.windows[ viewId ] = v;
@@ -3495,6 +3515,7 @@ function apiWrapper( event, force )
 											method: 'closewindow'
 										} ), '*' );
 										setTimeout( function(){ if( theApp.contentWindow ) theApp.quit(); }, 100 );
+										break;
 									}
 								}
 							}

@@ -134,14 +134,14 @@ function PollTray()
 			{
 				nots[ a ].seen = true;
 				
-				if( nots[ a ].notificationId )
+				if( nots[ a ].uniqueId )
 				{
 					if( Workspace.currentViewState == 'active' && !Workspace.sleeping )
 					{
 						var l = new Library( 'system.library' );
 						l.onExecuted = function(){};
 						l.execute( 'mobile/updatenotification', { 
-							notifid: nots[ a ].notificationId, 
+							notifid: nots[ a ].uniqueId, 
 							action: 1,
 							pawel: 10
 						} );
@@ -156,15 +156,15 @@ function PollTray()
 					d.className = 'BubbleInfo';
 					d.innerHTML = '<div><p class="Layout"><strong>' + nots[a].title + '</strong></p><p class="Layout">' + nots[a].text + '</p></div>';
 					tray.notifications.appendChild( d );
-					d.onclick = function( e )
+					d.onmousedown = function( e )
 					{
 						if( event.clickCallback )
 						{
 							event.clickCallback();
-							RemoveNotificationEvent( event.notificationId );
-							if( tray.notifications && this && this.parentNode == tray.notifications )
-								tray.notifications.removeChild( this );
 						}
+						RemoveNotificationEvent( event.uniqueId );
+						if( tray.notifications && this && this.parentNode == tray.notifications )
+							tray.notifications.removeChild( this );
 						PollTray();
 						return cancelBubble( e );
 					}
@@ -242,7 +242,7 @@ function PollTray()
 						{
 							if( this.notification.clickCallback )
 							{
-								RemoveNotificationEvent( this.notification.notificationId );
+								RemoveNotificationEvent( this.notification.uniqueId );
 								this.notification.clickCallback();
 							}
 							this.parentNode.removeChild( this );
@@ -346,77 +346,6 @@ function PollTray()
 		tray.notifications.className = 'Hidden';
 		tray.notifications.onclick = null;
 	}
-	
-	/*
-	if( 1 == 2 )
-	{
-		var mic = false;
-		for( var a = 0; a < s.length; a++ )
-		{
-			if( !s[a].className ) continue;
-			if( s[a].className.indexOf( 'Microphone' ) == 0 )
-				mic = s[a];
-		}
-		// TODO: Reenable mic when it works.
-		mic.style.display = 'none';
-		mic.onclick = function()
-		{
-			if( Doors.handsFree )
-			{
-				var btn = Doors.handsFree.getElementsByClassName( 'si-btn' )[0];
-				if( btn.recognition ) btn.recognition.stop();
-				Doors.handsFree.parentNode.removeChild( Doors.handsFree );
-				Doors.handsFree = false;
-				return;
-			}
-			var f = new File( 'System:templates/handsfree.html' );
-			f.onLoad = function( data )
-			{
-				var d = document.createElement( 'div' );
-				d.id = 'Handsfree';
-				d.innerHTML = data;
-				document.body.insertBefore( d, document.body.firstChild );
-				Doors.handsFree = d;
-			
-				// For other browsers
-				if ( !( 'webkitSpeechRecognition' in window ) )
-				{
-					var inp = ge( 'Handsfree' ).getElementsByTagName( 'input' )[0];
-					inp.focus();
-					return;
-				}
-				else
-				{
-					setTimeout( function( e )
-					{
-						var dv = ge( 'Handsfree' ).getElementsByTagName( 'button' )[0];
-						dv.onclick = function( e )
-						{
-							return cancelBubble( e );
-						}
-						dv.click();
-					}, 100 );
-					// Remove it
-					d.onclick = function()
-					{
-						mic.onclick();
-						var stopper = ge( 'Tray' ).getElementsByClassName( 'Microphone' );
-						if( stopper.length ) stopper = stopper[0];
-						if( stopper )
-						{
-							stopper.className = 'Microphone IconSmall fa-microphone-slash';
-						}
-					}
-				}
-				// For google chrome
-				InitSpeechControls( function()
-				{
-					Say( 'Voice mode started.', false, 'both' );
-				} );
-			}
-			f.load();
-		}
-	}*/
 }
 
 function PollMobileTray()
@@ -435,7 +364,7 @@ function AddNotificationEvent( evt )
 	).toString();
 	evt.uniqueId = uniqueId;
 	Workspace.notificationEvents.push( evt );
-	//console.log( 'Added notification event.', evt );
+	console.log( 'Added notification event.', evt );
 	return uniqueId;
 }
 
@@ -675,8 +604,8 @@ function Notify( message, callback, clickcallback )
 					if( clickcallback && mousePointer.candidate && mousePointer.candidate.el == n )
 					{
 						clickcallback( e )
-						RemoveNotificationEvent( notificationId );
 					}
+					RemoveNotificationEvent( notificationId );
 				}
 				cancelBubble( e );
 			};
