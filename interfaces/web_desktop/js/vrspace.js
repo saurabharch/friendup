@@ -22,6 +22,7 @@ DeepestField = {
 	networkActivity: { timeToFinish: [] },
 	addConnection: function(){},
 	delConnection: function(){},
+	selectTask: function(){},
 	redraw: function(){}
 };
 
