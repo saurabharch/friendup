@@ -298,10 +298,13 @@ int generateConnectedUsersID( SystemBase *l, FULONG groupID, BufString *retStrin
  * @param retString BufString to which results will be stored
  * @param extServiceString pointer to BufString where results to external service will be stored
  * @param userIDs user id's
+ * @param nrUsersAddedService pointer to integer where information about number of users added to service call will be stored
  * @return 0 when success, otherwise error number
  */
-int generateConnectedUsersIDByID( SystemBase *l, FULONG groupID, BufString *retString, BufString *extServiceString, char *userIDs )
+int generateConnectedUsersIDByID( SystemBase *l, FULONG groupID, BufString *retString, BufString *extServiceString, char *userIDs, int *nrUsersAddedService )
 {
+	*nrUsersAddedService = 0;
+	
 	SQLLibrary *sqlLib = l->LibrarySQLGet( l );
 	if( sqlLib != NULL )
 	{
@@ -372,6 +375,8 @@ int generateConnectedUsersIDByID( SystemBase *l, FULONG groupID, BufString *retS
 					
 					if( isDisabled == FALSE )
 					{
+						(*nrUsersAddedService)++;
+						
 						// add response to external service
 						if( spos == 0 )
 						{
@@ -1609,6 +1614,7 @@ where u.ID in (SELECT ID FROM FUser WHERE ID NOT IN (select UserID from FUserToG
 		char *args = NULL;
 		char *authid = NULL;
 		HashmapElement *el = NULL;
+		int numberOfAddedUsers = 0;
 		
 		response = HttpNewSimple( HTTP_200_OK,  tags );
 		
@@ -1730,7 +1736,7 @@ where u.ID in (SELECT ID FROM FUser WHERE ID NOT IN (select UserID from FUserToG
 				
 				// get required information for external servers
 			
-				generateConnectedUsersIDByID( l, groupID, retString, retServiceString, usersSQL );
+				generateConnectedUsersIDByID( l, groupID, retString, retServiceString, usersSQL, &numberOfAddedUsers );
 				
 				BufStringAddSize( retString, "]", 1 );
 				BufStringAddSize( retServiceString, "]", 1 );
@@ -1740,7 +1746,10 @@ where u.ID in (SELECT ID FROM FUser WHERE ID NOT IN (select UserID from FUserToG
 			BufStringAddSize( retServiceString, "}", 1 );
 			
 			// send notification to external service
-			NotificationManagerSendEventToConnections( l->sl_NotificationManager, request, NULL, NULL, "service", "group", "addusers", retServiceString->bs_Buffer );
+			if( numberOfAddedUsers > 0 )
+			{
+				NotificationManagerSendEventToConnections( l->sl_NotificationManager, request, NULL, NULL, "service", "group", "addusers", retServiceString->bs_Buffer );
+			}
 		
 			HttpSetContent( response, retString->bs_Buffer, retString->bs_Size );
 			retString->bs_Buffer = NULL;
@@ -2113,7 +2122,7 @@ where u.ID in (SELECT ID FROM FUser WHERE ID NOT IN (select UserID from FUserToG
 						itmp = snprintf( tmp, sizeof(tmp), "{\"groupid\":%lu,\"parentid\":%lu,\"userids\":[", fg->ug_ID, fg->ug_ParentID );
 						BufStringAddSize( retString, tmp, itmp );
 
-						generateConnectedUsersIDByID( l, groupID, retString, retString, usersSQL );
+						generateConnectedUsersIDByID( l, groupID, retString, retString, usersSQL, &itmp );
 						BufStringAddSize( retString, "]}", 2 );
 						
 						NotificationManagerSendEventToConnections( l->sl_NotificationManager, request, NULL, NULL, "service", "group", "setusers", retString->bs_Buffer );
