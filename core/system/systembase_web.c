@@ -904,6 +904,10 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 	{
 		DEBUG("User\n");
 		response = UMWebRequest( l, urlpath, (*request), loggedSession, result, &loginLogoutCalled );
+		if( loginLogoutCalled == TRUE )
+		{
+			loggedSession = NULL;
+		}
 	}
 	
 	//

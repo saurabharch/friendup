@@ -1325,10 +1325,11 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 					
 						GenerateUUID( &( logusr->u_UUID ) );
 					
-						if( status >= 0 )
+						// it is not allowed to change status to API user
+
+						if( !logusr->u_IsAPI && status >= 0 )
 						{
 							logusr->u_Status = status;
-						
 							{
 								char msg[ 512 ];
 								if( status == USER_STATUS_DISABLED )
@@ -1343,6 +1344,11 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 								NotificationManagerSendEventToConnections( l->sl_NotificationManager, request, NULL, NULL, "service", "user", "update", msg );
 							}
 						}
+						else if( logusr->u_IsAPI )
+						{
+							logusr->u_Status = USER_STATUS_ENABLED;
+						}
+						
 						UMUserUpdateDB( l->sl_UM, logusr );
 					
 						UGMAssignGroupToUserByStringDB( l->sl_UGM, logusr, level, workgroups );
