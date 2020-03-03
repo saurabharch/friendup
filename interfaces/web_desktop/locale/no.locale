@@ -423,6 +423,7 @@ i18n_please_choose_a_path               : Vennligst velg en sti.
 
 i18n_cancel                             : Avbryt
 i18n_moving_files                       : Flytt filer
+i18n_delete_error                       : Feil ved sletting
 i18n_copying_files                      : Kopier filer
 i18n_filecopy_error                     : Feil ved filkopiering
 i18n_do_you_want_copy                   : Vil du virkelig kopiere disse filene?
@@ -445,6 +446,12 @@ i18n_volume_permissions                 : Enhetsrettigheter
 i18n_drag_to_download_file              : Clikk eller dra og slipp på din desktop.
 i18n_drag_files_to_download             : Slipp filer for nedlastning.
 
+i18n_creating_directory                 : Lager mappe
+i18n_building_file_index                : Lager filindex...
+i18n_counted                            : Har telt
+i18n_counted_files                      : filer.
+i18n_cleaning_up                        : Rydder...
+
 i18n_could_not_download                 : Kunne ikke laste ned
 i18n_download_wrong_type                : Kun filer kan lastes ned.
 
@@ -462,6 +469,7 @@ Running tasks : Kjørende prosesser
 i18n_read_only                          : Kun lese
 i18n_task_running                       : oppgave kjører
 i18n_tasks_running                      : oppgaver kjører
+i18n_manage_tasks                       : Oppgavedetaljer
 i18n_visible                            : Visible
 i18n_network_activity                   : Network activity
 i18n_today                              : I dag
@@ -596,9 +604,12 @@ i18n_day_sat                            : lør
 i18n_day_sun                            : søn
 
 i18n_server_disconnected                : Frakoblet
-i18n_ws_disconnected                    : Redusert nettverk
+i18n_ws_disconnected                    : Nettverk frakoblet
 i18n_copy_to_system_clipboard           : Vil du overføre din Friend utklippstavle til systemet ditt?
 i18n_copy_to_system_clipboard_headline  : Overfør utklippstavle til systemet
+
+i18n_directory_too_long                 : Mappen har tatt for lang tid å laste inn. Er du offline?
+i18n_refresh_when_online                : Frisk opp når du er online
 
 #File types --------------------------------------------------------------------
 

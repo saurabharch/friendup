@@ -794,6 +794,12 @@ SystemBase *SystemInit( void )
 		Log( FLOG_ERROR, "Cannot initialize UMNew\n");
 	}
 	
+	l->sl_RoleManager = RMNew( l );
+	if( l->sl_RoleManager == NULL )
+	{
+		Log( FLOG_ERROR, "Cannot initialize RMNew\n");
+	}
+	
 	l->sl_DeviceManager = DeviceManagerNew( l );
 	if( l->sl_DeviceManager == NULL )
 	{
@@ -1179,6 +1185,10 @@ void SystemClose( SystemBase *l )
 	if( l->sl_PermissionManager != NULL )
 	{
 		PermissionManagerDelete( l->sl_PermissionManager );
+	}
+	if( l->sl_RoleManager != NULL )
+	{
+		RMDelete( l->sl_RoleManager );
 	}
 	
 	// Remove sentinel from active memory
@@ -1632,7 +1642,7 @@ int SystemInitExternal( SystemBase *l )
 		{
 			char *err = NULL;
 			DEBUG( "[SystemBase] FINDING DRIVES FOR USER %s\n", tmpUser->u_Name );
-			UserDeviceMount( l, sqllib, tmpUser, 1, TRUE, &err );
+			UserDeviceMount( l, sqllib, tmpUser, 1, TRUE, &err, FALSE );
 			if( err != NULL )
 			{
 				Log( FLOG_ERROR, "Initial system mount error. UserID: %lu Error: %s\n", tmpUser->u_ID, err );
@@ -1974,10 +1984,11 @@ void CheckAndUpdateDB( struct SystemBase *l )
  * @param force integer 0 = don't force 1 = force
  * @param unmountIfFail should be device unmounted in DB if mount will fail
  * @param mountError pointer to error message
+ * @param notify notify about changes
  * @return 0 if everything went fine, otherwise error number
  */
 
-int UserDeviceMount( SystemBase *l, SQLLibrary *sqllib, User *usr, int force, FBOOL unmountIfFail, char **mountError )
+int UserDeviceMount( SystemBase *l, SQLLibrary *sqllib, User *usr, int force, FBOOL unmountIfFail, char **mountError, FBOOL notify )
 {	
 	Log( FLOG_INFO,  "[UserDeviceMount] Mount user device from Database\n");
 	
@@ -2058,19 +2069,23 @@ usr->u_ID , usr->u_ID, usr->u_ID
 			File *device = NULL;
 			DEBUG("[UserDeviceMount] Before mounting\n");
 			
-			int err = MountFS( l->sl_DeviceManager, (struct TagItem *)&tags, &device, usr, mountError, usr->u_IsAdmin );
+			int err = MountFS( l->sl_DeviceManager, (struct TagItem *)&tags, &device, usr, mountError, usr->u_IsAdmin, notify );
 
 			FRIEND_MUTEX_LOCK( &l->sl_DeviceManager->dm_Mutex );
 
+			// if there is error but error is not "device is already mounted"
 			if( err != 0 && err != FSys_Error_DeviceAlreadyMounted )
 			{
 				Log( FLOG_ERROR,"[UserDeviceMount] \tCannot mount device, device '%s' will be unmounted. ERROR %d\n", row[ 0 ], err );
-				if( mount == 1 && unmountIfFail == TRUE && err != FSys_Error_CustomError )
+				// if unmountIfFail is set
+				// and if error is not equal to FSys_Error_CustomError which is returned when main drive is installed but not shareddrive (for other users)
+				if( unmountIfFail == TRUE && err != FSys_Error_CustomError )
 				{
 					//Log( FLOG_INFO, "UserDeviceMount. Device unmounted: %s UserID: %lu 
 					
+					/*
 					sqllib->SNPrintF( sqllib, temptext, sizeof(temptext), "\
-UPDATE Filesystem f SET `Mounted` = '0' \
+UPDATE `Filesystem` f SET `Mounted` = '0' \
 WHERE \
 ( \
 f.UserID = '%ld' OR \
@@ -2084,15 +2099,23 @@ ug.UserID = '%ld' \
 AND LOWER(f.Name) = LOWER('%s')", 
 						usr->u_ID, usr->u_ID, (char *)row[ 0 ] 
 					);
-					void *resx = sqllib->Query( sqllib, temptext );
-					if( resx != NULL )
-					{
-						sqllib->FreeResult( sqllib, resx );
-					}
+					*/
+					sqllib->SNPrintF( sqllib, temptext, sizeof(temptext), "UPDATE `Filesystem` SET Mounted=0 WHERE ID=%lu", id );
+					
+					sqllib->QueryWithoutResults( sqllib, temptext );
+				}
+				else
+				{
+					sqllib->SNPrintF( sqllib, temptext, sizeof(temptext), "UPDATE `Filesystem` SET Mounted=0 WHERE ID=%lu", id );
+					
+					sqllib->QueryWithoutResults( sqllib, temptext );
 				}
 			}
-			else if( device )
+			else if( device != NULL )
 			{
+				sqllib->SNPrintF( sqllib, temptext, sizeof(temptext), "UPDATE `Filesystem` SET Mounted=1 WHERE ID=%lu", id );
+					
+				sqllib->QueryWithoutResults( sqllib, temptext );
 				device->f_Mounted = TRUE;
 			}
 			else
@@ -2608,7 +2631,6 @@ int WebSocketSendMessageInt( UserSession *usersession, char *msg, int len )
 						wsc = (UserSessionWebsocket *)wsc->node.mln_Succ;
 					}
 				}
-		
 				FFree( buf );
 				FRIEND_MUTEX_UNLOCK( &(usersession->us_Mutex) );
 			}

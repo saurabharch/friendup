@@ -22,6 +22,113 @@
 #include <core/functions.h>
 #include <system/fsys/door_notification.h>
 
+// local funciton
+
+static inline void EscapeConfigFromString( char *str, char **configEscaped, char **executeCmd )
+{
+	// Escape config
+	int len = str ? strlen( str ) : 0, k = 0;
+	//dev->f_Visible = 1; // Special case, default is visible
+	
+	DEBUG( "[DeviceMWebRequest] Getting config (length: %d).\n", len );
+	if( len > 2 )
+	{
+		if( *configEscaped )
+		{
+			FFree( *configEscaped );
+		}
+		*configEscaped = FCalloc( len * 2 + 2, sizeof( char ) );
+		int n = 0; for( ; n < len; n++ )
+		{
+			if( str[n] == '"' )
+			{
+				(*configEscaped)[k++] = '\\';
+			}
+			(*configEscaped)[k++] = str[n];
+		}
+		// Find executable
+		DEBUG( "[DeviceMWebRequest] Looking in: %s\n", str );
+		*executeCmd = FCalloc( 256, sizeof( char ) );
+		int mo = 0, im = 0, imrun = 1;
+		for( ; imrun == 1 && im < len - 14; im++ )
+		{
+			if( strncmp( str + im, "\"Executable\"", 12 ) == 0 )
+			{
+				im += 14;
+				imrun = 0;
+				for( ; im < len; im++ )
+				{
+					// Next quote is end of string
+					if( str[im] == '"' ) break;
+					*executeCmd[ mo++ ] = str[ im ];
+				}
+			}
+		}
+		
+		// remove private user data
+		{
+			char *lockey = strstr( *configEscaped, "PrivateKey" );
+			if( lockey != NULL )
+			{
+				// add  PrivateKey"="
+				lockey += 15;
+				int pos = 0;
+				while( TRUE )
+				{
+					//printf("inside '%c'\n", *lockey );
+					if( *lockey == 0 || (lockey[ 0 ] == '\\' && lockey[ 1 ] == '"' ) )
+					{
+						break;
+					}
+					*lockey = ' ';
+					lockey++;
+					pos++;
+				}
+			}
+		}
+	}
+}
+
+// fill information about device
+
+static inline void FillDeviceInfo( int devnr, char *tmp, int tmplen, int mounted, char *fname, char *fsysname, char *path, char *sysname, char *config, int visible, char *exec, int isLimited, char *devserver, int devport, FULONG usergroupid )
+{
+	if( devnr == 0 )
+	{
+		snprintf( tmp, tmplen, "{\"Name\":\"%s\",\"Type\":\"%s\",\"Path\":\"%s\",\"FSys\":\"%s\",\"Config\":\"%s\",\"Visible\":\"%s\",\"Execute\":\"%s\",\"IsLimited\":\"%d\",\"Server\":\"%s\",\"Port\":\"%d\",\"GroupID\":\"%lu\",\"Mounted\":%d}\n", 
+			fname ? fname : "", 
+			fsysname ? fsysname : "", 
+			path ? path : "",
+			sysname ? sysname : "",
+			config ? config: "{}",
+			visible == 1 ? "true" : "false",
+			exec != NULL && strlen( exec ) ? exec : "", 
+			isLimited,
+			devserver ? devserver : "",
+			devport,
+			usergroupid,
+			mounted
+		);
+	}
+	else
+	{
+		snprintf( tmp, tmplen, ",{\"Name\":\"%s\",\"Type\":\"%s\",\"Path\":\"%s\",\"FSys\":\"%s\",\"Config\":\"%s\",\"Visible\":\"%s\",\"Execute\":\"%s\",\"IsLimited\":\"%d\",\"Server\":\"%s\",\"Port\":\"%d\",\"GroupID\":\"%lu\",\"Mounted\":%d}\n", 
+			fname ? fname : "",
+			fsysname ? fsysname : "", 
+			path ? path : "",
+			sysname ? sysname : "",
+			config ? config: "{}",
+			visible == 1 ? "true" : "false",
+			exec != NULL && strlen( exec ) ? exec : "",
+			isLimited,
+			devserver ? devserver : "",
+			devport,
+			usergroupid,
+			mounted
+		);
+	}
+}
+
 /**
  * Device web calls handler
  *
@@ -501,19 +608,43 @@ f.Name ASC";
 			// this functionality allow admins to mount other users drives
 			//
 			
-			if( userID > 0 && usr->u_IsAdmin == TRUE )
+			if( userID > 0 )
 			{
-				DEBUG("UserID = %lu user is admin: %d\n", userID, usr->u_IsAdmin );
-				User *locusr = UMGetUserByID( l->sl_UM, userID );
-				if( locusr != NULL )
+				char *authid = NULL;
+				char *args = NULL;
+				el = HttpGetPOSTParameter( request, "authid" );
+				if( el != NULL )
 				{
-					usr = locusr;
-					
+					authid = el->data;
 				}
-				else
+				el = HttpGetPOSTParameter( request, "args" );
+				if( el != NULL )
 				{
-					foundUserInMemory = FALSE;
+					args = el->data;
+					//args = UrlDecodeToMem( el->data );
 				}
+				
+				if( usr->u_IsAdmin == TRUE || PermissionManagerCheckPermission( l->sl_PermissionManager, loggedSession->us_SessionID, authid, args ) )
+				{
+					DEBUG("UserID = %lu user is admin: %d\n", userID, usr->u_IsAdmin );
+					User *locusr = UMGetUserByID( l->sl_UM, userID );
+					if( locusr != NULL )
+					{
+						usr = locusr;
+					}
+					else
+					{
+						foundUserInMemory = FALSE;
+					}
+				} // isAdmin or permissions granted
+				//if( args != NULL )
+				//{
+				//	FFree( args );
+				//}
+			}
+			else
+			{
+				userID = usr->u_ID;
 			}
 			
 			/*
@@ -554,7 +685,7 @@ f.Name ASC";
 				File *mountedDev = NULL;
 				char *error = NULL;
 				
-				int mountError = MountFS( l->sl_DeviceManager, (struct TagItem *)&tags, &mountedDev, usr, &error, usr->u_IsAdmin );
+				int mountError = MountFS( l->sl_DeviceManager, (struct TagItem *)&tags, &mountedDev, usr, &error, usr->u_IsAdmin, TRUE );
 				
 				// This is ok!
 				if( mountError != 0 && mountError != FSys_Error_DeviceAlreadyMounted )
@@ -734,10 +865,14 @@ AND LOWER(f.Name) = LOWER('%s')",
 		}
 		
 		HashmapElement *el = HttpGetPOSTParameter( request, "userid" );
-		if( el != NULL && loggedSession->us_User->u_IsAdmin == TRUE )
+		if( el != NULL )
 		{
 			char *next;
 			userID = (FLONG)strtol(( char *)el->data, &next, 0);
+		}
+		else
+		{
+			userID = loggedSession->us_UserID;
 		}
 		
 		el = HttpGetPOSTParameter( request, "devname" );
@@ -751,6 +886,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 			
 			if( devname != NULL && ( ldevname = FCalloc( strlen( devname ) + 50, sizeof(char) ) ) != NULL )
 			{
+				DEBUG("Devname found\n");
 				UrlDecode( ldevname, devname );
 				strcpy( devname, ldevname );
 				
@@ -785,6 +921,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 		{
 			if( loggedSession != NULL )
 			{
+				DEBUG("loggedSession found\n");
 				mountError = -1;
 				char *ldevname = NULL;
 				User *activeUser = loggedSession->us_User;
@@ -792,28 +929,74 @@ AND LOWER(f.Name) = LOWER('%s')",
 				
 				if( userID > 0 )
 				{
+					char *authid = NULL;
+					char *args = NULL;
+					
+					DEBUG("UserID parameter found: %lu\n", userID );
+					
+					el = HttpGetPOSTParameter( request, "authid" );
+					if( el != NULL )
+					{
+						authid = el->data;
+					}
+					el = HttpGetPOSTParameter( request, "args" );
+					if( el != NULL )
+					{
+						args = el->data;
+						//args = UrlDecodeToMem( el->data );
+					}
 					DEBUG("UserID %lu\n", userID );
 			
-					User *locusr = UMGetUserByID( l->sl_UM, userID );
-					// user is not in memory, we can remove his entries in DB only
-					if( locusr == NULL )
+					if( activeUser->u_IsAdmin || PermissionManagerCheckPermission( l->sl_PermissionManager, loggedSession->us_SessionID, authid, args ) )
 					{
+						DEBUG("Permissions accepted or user is admin\n");
+						User *locusr = NULL;
+						
+						if( userID == loggedSession->us_User->u_ID )
+						{
+							DEBUG("Seems changes will be applyed to current user\n");
+							locusr = loggedSession->us_User;
+						}
+						else
+						{
+							locusr = UMGetUserByID( l->sl_UM, userID );
+						}
+						
+						// user is not in memory, we can remove his entries in DB only
+						if( locusr == NULL )
+						{
+							deviceUnmounted = TRUE;
+							mountError = 0;
+						}
+						else
+						{
+							Log( FLOG_INFO, "Admin1 ID[%lu] is mounting drive to user ID[%lu]\n", activeUser->u_ID, locusr->u_ID );
+							activeUser = locusr;
+							userID = activeUser->u_ID;
+						}
+						//deviceUnmounted = TRUE;
 
-						deviceUnmounted = TRUE;
 						mountError = 0;
 					}
 					else
 					{
-						Log( FLOG_INFO, "Admin1 ID[%lu] is mounting drive to user ID[%lu]\n", activeUser->u_ID, locusr->u_ID );
-						activeUser = locusr;
+						Log( FLOG_INFO, "Admin1 ID[%lu] is mounting drive to user ID[%lu]\n", activeUser->u_ID, activeUser->u_ID );
 						userID = activeUser->u_ID;
 					}
+					//if( args != NULL )
+					//{
+					//	FFree( args );
+					//}
 				}
+				
+				DEBUG("[DeviceMWebRequest] device unmounted: %d\n", deviceUnmounted );
 				
 				if( deviceUnmounted == FALSE )
 				{
 					char *type = NULL;
 					int fid = 0;
+					
+					DEBUG("Device unmounted = FALSE\n");
 				
 					File *f = NULL;
 					LIST_FOR_EACH( activeUser->u_MountedDevs, f, File * )
@@ -843,6 +1026,8 @@ AND LOWER(f.Name) = LOWER('%s')",
 							}
 						}
 					}
+					
+					DEBUG("[DeviceMWebRequest] ldevname: %s\n", ldevname );
 				
 					// check also device attached to groups
 					if( ldevname == NULL )
@@ -886,7 +1071,9 @@ AND LOWER(f.Name) = LOWER('%s')",
 						{FSys_Mount_Type, (FULONG)type },
 						{TAG_DONE, TAG_DONE }
 					};
+					DEBUG("[DeviceMWebRequest] call UnMountFS\n");
 				
+					DEBUG("[DeviceMWebRequest] Unmount will be called\n");
 					mountError = UnMountFS( l->sl_DeviceManager, (struct TagItem *)&tags, activeUser, loggedSession );
 					DEBUG("[DeviceMWebRequest] Unmounting device error %d\n", mountError );
 				}
@@ -923,7 +1110,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 						
 						Log( FLOG_INFO, "Device was unmounted with success: %s!\n", devname );
 						
-						void *res = sqllib->Query( sqllib, temptext );
+						sqllib->QueryWithoutResults( sqllib, temptext );
 					
 						HttpAddTextContent( response, "ok<!--separate-->{ \"Response\": \"Successfully unmounted\" }" );
 						*result = 200;
@@ -1228,7 +1415,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 						SQLLibrary *sqllib  = l->LibrarySQLGet( l );
 						if( sqllib != NULL )
 						{
-							UserDeviceMount( l, sqllib, user, 0, TRUE, &error );
+							UserDeviceMount( l, sqllib, user, 0, TRUE, &error, TRUE );
 							l->LibrarySQLDrop( l, sqllib );
 						}
 						else
@@ -1326,14 +1513,6 @@ AND LOWER(f.Name) = LOWER('%s')",
 		}
 		response = HttpNewSimple(  HTTP_200_OK,  tags );
 		
-		if( l->sl_ActiveAuthModule == NULL )
-		{
-			char dictmsgbuf[ 256 ];
-			snprintf( dictmsgbuf, sizeof(dictmsgbuf), "fail<!--separate-->{ \"response\": \"%s\", \"code\":\"%d\" }", l->sl_Dictionary->d_Msg[DICT_AUTHMOD_NOT_SELECTED] , DICT_AUTHMOD_NOT_SELECTED );
-			HttpAddTextContent( response, dictmsgbuf );
-			goto error;
-		}
-		
 		{
 			UserSession *logsess = loggedSession;
 			User *curusr = logsess->us_User; 
@@ -1343,6 +1522,9 @@ AND LOWER(f.Name) = LOWER('%s')",
 			if( curusr != NULL )
 			{
 				File *dev = curusr->u_MountedDevs;
+				
+				BufString *bsMountedDrives = BufStringNew();	// we need information about not mounted drives
+				
 				BufString *bs = BufStringNew();
 				BufStringAdd( bs, "ok<!--separate-->[" );
 				int devnr = 0;
@@ -1360,66 +1542,14 @@ AND LOWER(f.Name) = LOWER('%s')",
 				while( dev != NULL )
 				{
 					FHandler *sys = (FHandler *)dev->f_FSys;
+					char *sysname = NULL;
+					if( sys != NULL )
+					{
+						sysname = sys->Name;
+					}
 					Filesystem *fsys = ( Filesystem *)dev->f_DOSDriver;
 					
-					// Escape config
-					int len = dev->f_Config ? strlen( dev->f_Config ) : 0, k = 0;
-					dev->f_Visible = 1; // Special case, default is visible
-					
-					DEBUG( "[DeviceMWebRequest] Getting config (length: %d).\n", len );
-					if( len > 2 )
-					{
-						if( configEscaped ) FFree( configEscaped );
-						configEscaped = FCalloc( len * 2 + 2, sizeof( char ) );
-						int n = 0; for( ; n < len; n++ )
-						{
-							if( dev->f_Config[n] == '"' )
-							{
-								configEscaped[k++] = '\\';
-							}
-							configEscaped[k++] = dev->f_Config[n];
-						}
-						// Find executable
-						DEBUG( "[DeviceMWebRequest] Looking in: %s\n", dev->f_Config );
-						executeCmd = FCalloc( 256, sizeof( char ) );
-						int mo = 0, im = 0, imrun = 1;
-						for( ; imrun == 1 && im < len - 14; im++ )
-						{
-							if( strncmp( dev->f_Config + im, "\"Executable\"", 12 ) == 0 )
-							{
-								im += 14;
-								imrun = 0;
-								for( ; im < len; im++ )
-								{
-									// Next quote is end of string
-									if( dev->f_Config[im] == '"' ) break;
-									executeCmd[mo++] = dev->f_Config[ im ];
-								}
-							}
-						}
-						
-						// remove private user data
-						{
-							char *lockey = strstr( configEscaped, "PrivateKey" );
-							if( lockey != NULL )
-							{
-								// add  PrivateKey"="
-								lockey += 15;
-								int pos = 0;
-								while( TRUE )
-								{
-									//printf("inside '%c'\n", *lockey );
-									if( *lockey == 0 || (lockey[ 0 ] == '\\' && lockey[ 1 ] == '"' ) )
-									{
-										break;
-									}
-									*lockey = ' ';
-									lockey++;
-									pos++;
-								}
-							}
-						}
-					}
+					EscapeConfigFromString( dev->f_Config, &configEscaped, &executeCmd );
 					
 					memset( tmp, '\0', TMP_SIZE );
 					
@@ -1433,6 +1563,22 @@ AND LOWER(f.Name) = LOWER('%s')",
 						}
 					}
 					
+					FillDeviceInfo( devnr, tmp, TMP_SIZE_MIN1, dev->f_Mounted, dev->f_Name, dev->f_FSysName, dev->f_Path, sysname, configEscaped, dev->f_Visible, executeCmd, isLimited, dev->f_DevServer, dev->f_DevPort, dev->f_UserGroupID );
+					
+					{
+						char inttmp[ 256 ];
+						int addlen = 0;
+						if( bsMountedDrives->bs_Size == 0 )
+						{
+							addlen = snprintf( inttmp, sizeof( inttmp ), "%lu", dev->f_ID );
+						}
+						else
+						{
+							addlen = snprintf( inttmp, sizeof( inttmp ), ",%lu", dev->f_ID );
+						}
+						BufStringAddSize( bsMountedDrives, inttmp, addlen );
+					}
+					/*
 					if( devnr == 0 )
 					{
 						snprintf( tmp, TMP_SIZE_MIN1, "{\"Name\":\"%s\",\"Type\":\"%s\",\"Path\":\"%s\",\"FSys\":\"%s\",\"Config\":\"%s\",\"Visible\":\"%s\",\"Execute\":\"%s\",\"IsLimited\":\"%d\",\"Server\":\"%s\",\"Port\":\"%d\",\"GroupID\":\"%lu\"}\n", 
@@ -1465,12 +1611,18 @@ AND LOWER(f.Name) = LOWER('%s')",
 							dev->f_UserGroupID
 						);
 					}
+					*/
 					
-					if( executeCmd ) FFree( executeCmd );
-					executeCmd = NULL;
-					
-					if( configEscaped ) FFree( configEscaped );
-					configEscaped = NULL;
+					if( executeCmd )
+					{
+						FFree( executeCmd );
+						executeCmd = NULL;
+					}
+					if( configEscaped )
+					{
+						FFree( configEscaped );
+						configEscaped = NULL;
+					}
 					
 					BufStringAdd( bs, tmp );
 					
@@ -1493,10 +1645,6 @@ AND LOWER(f.Name) = LOWER('%s')",
 					{
 						dev = ugl->ugl_Group->ug_MountedDevs;
 					}
-					//if( curusr->u_Groups[ gr ] != NULL )
-					//{
-					//	dev = curusr->u_Groups[ gr ]->ug_MountedDevs;
-					//}
 					
 					while( dev != NULL )
 					{
@@ -1507,61 +1655,13 @@ AND LOWER(f.Name) = LOWER('%s')",
 						}
 						
 						FHandler *sys = (FHandler *)dev->f_FSys;
-					
-						// Escape config
-						int len = dev->f_Config ? strlen( dev->f_Config ) : 0, k = 0;
-						//dev->f_Visible = 1; // Special case, default is visible
-					
-						DEBUG( "[DeviceMWebRequest] Getting config (length: %d).\n", len );
-						if( len > 2 )
+						char *sysname = NULL;
+						if( sys != NULL )
 						{
-							if( configEscaped ) FFree( configEscaped );
-							configEscaped = FCalloc( len * 2 + 2, sizeof( char ) );
-							int n = 0; for( ; n < len; n++ )
-							{
-								if( dev->f_Config[n] == '"' )
-								{
-									configEscaped[k++] = '\\';
-								}
-								configEscaped[k++] = dev->f_Config[n];
-							}
-							// Find executable
-							DEBUG( "[DeviceMWebRequest] Looking in: %s\n", dev->f_Config );
-							executeCmd = FCalloc( 256, sizeof( char ) );
-							int mo = 0, im = 0, imrun = 1;
-							for( ; imrun == 1 && im < len - 14; im++ )
-							{
-								if( strncmp( dev->f_Config + im, "\"Executable\"", 12 ) == 0 )
-								{
-									im += 14;
-									imrun = 0;
-									for( ; im < len; im++ )
-									{
-										// Next quote is end of string
-										if( dev->f_Config[im] == '"' ) break;
-										executeCmd[mo++] = dev->f_Config[ im ];
-									}
-								}
-							}
+							sysname = sys->Name;
 						}
-						
-						char *lockey = strstr( configEscaped, "PrivateKey" );
-						if( lockey != NULL )
-						{
-							// add  PrivateKey"="
-							lockey += 15;
-							int pos = 0;
-							while( TRUE )
-							{
-								if( *lockey == 0 || (lockey[ 0 ] == '\\' && lockey[ 1 ] == '"' ) )
-								{
-									break;
-								}
-								*lockey = ' ';
-								lockey++;
-								pos++;
-							}
-						}
+					
+						EscapeConfigFromString( dev->f_Config, &configEscaped, &executeCmd );
 					
 						memset( tmp, '\0', TMP_SIZE );
 					
@@ -1575,6 +1675,22 @@ AND LOWER(f.Name) = LOWER('%s')",
 							}
 						}
 					
+						FillDeviceInfo( devnr, tmp, TMP_SIZE_MIN1, dev->f_Mounted, dev->f_Name, dev->f_FSysName, dev->f_Path, sysname, configEscaped, dev->f_Visible, executeCmd, isLimited, dev->f_DevServer, dev->f_DevPort, dev->f_UserGroupID );
+						
+						{
+							char inttmp[ 256 ];
+							int addlen = 0;
+							if( bsMountedDrives->bs_Size == 0 )
+							{
+								addlen = snprintf( inttmp, sizeof( inttmp ), "%lu", dev->f_ID );
+							}
+							else
+							{
+								addlen = snprintf( inttmp, sizeof( inttmp ), ",%lu", dev->f_ID );
+							}
+							BufStringAddSize( bsMountedDrives, inttmp, addlen );
+						}
+					/*
 						if( devnr == 0 )
 						{
 							snprintf( tmp, TMP_SIZE_MIN1, "{\"Name\":\"%s\",\"Type\":\"%s\",\"Path\":\"%s\",\"FSys\":\"%s\",\"Config\":\"%s\",\"Visible\":\"%s\",\"Execute\":\"%s\",\"IsLimited\":\"%d\",\"Server\":\"%s\",\"Port\":\"%d\",\"GroupID\":\"%lu\"}\n", 
@@ -1608,12 +1724,18 @@ AND LOWER(f.Name) = LOWER('%s')",
 								dev->f_UserGroupID
 							);
 						}
+						*/
 					
-						if( executeCmd ) FFree( executeCmd );
-						executeCmd = NULL;
-					
-						if( configEscaped ) FFree( configEscaped );
-						configEscaped = NULL;
+						if( executeCmd )
+						{
+							FFree( executeCmd );
+							executeCmd = NULL;
+						}
+						if( configEscaped )
+						{
+							FFree( configEscaped );
+							configEscaped = NULL;
+						}
 						
 						// remove private user data
 						int size = strlen( tmp );
@@ -1644,12 +1766,64 @@ AND LOWER(f.Name) = LOWER('%s')",
 					ugl = (UserGroupLink *)ugl->node.mln_Succ;
 				}
 				
+				// now get all devices from database which are not mounted
+				//TODO we should get devices from DB assigned to user, to his groups and not mounted
+				/*
+				SQLLibrary *sqllib  = l->LibrarySQLGet( l );
+				if( sqllib != NULL )
+				{
+					int entries = 0;
+					int querysize = 256 + bsMountedDrives->bs_Size;
+					
+					char *query = FMalloc( querysize );
+					if( query != NULL )
+					{
+						sqllib->SNPrintF( sqllib, query, querysize, " ID NOT IN(%s) AND UserID", bsMountedDrives->bs_Buffer );
+						DEBUG("[DEVICE/LIST] sql: %s\n", query );
+					
+						Filesystem *rootdev = sqllib->Load( sqllib, FilesystemDesc, query, &entries );
+						if( rootdev != NULL )
+						{
+							Filesystem *locdev = rootdev;
+							while( locdev != NULL )
+							{
+								EscapeConfigFromString( locdev->fs_Config, &configEscaped, &executeCmd );
+								
+								FillDeviceInfo( devnr, tmp, TMP_SIZE_MIN1, locdev->fs_Mounted, locdev->fs_Name, locdev->fs_Type, locdev->fs_Path, NULL, configEscaped, 0, executeCmd, 0, locdev->fs_Server, locdev->fs_Port, locdev->fs_GroupID );
+								//locdev->fs_Config
+								BufStringAdd( bs, tmp );
+								
+								if( executeCmd )
+								{
+									FFree( executeCmd );
+									executeCmd = NULL;
+								}
+								if( configEscaped )
+								{
+									FFree( configEscaped );
+									configEscaped = NULL;
+								}
+								
+								locdev = (Filesystem *)locdev->node.mln_Succ;
+							}
+							
+							FilesystemDeleteAll( rootdev );
+						
+							//DEBUG( "[DeviceMWebRequest] We now have information: %s (query: %s) - name: %s\n", rootdev->f_Config, query, rootdev->f_Name );
+						}
+						FFree( query );
+					}
+					l->LibrarySQLDrop( l, sqllib );
+				}
+				*/
+				
 				FFree( tmp );
 				
 				BufStringAdd( bs, "]" );
 				
 				HttpAddTextContent( response, bs->bs_Buffer );
 				
+				BufStringDelete( bsMountedDrives );
 				BufStringDelete( bs );
 			}
 			else

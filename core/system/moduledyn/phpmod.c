@@ -92,7 +92,7 @@ char *FilterPHPVar( char *line )
 			continue;
 		}
 		// Kill unwanted stuff
-		if( line[ i ] == '`' )
+		if( line[ i ] == '`' || line[ i ] == '\'' )
 		{
 			line[ i ] = ' ';
 		}
@@ -162,7 +162,8 @@ char *Run( struct EModule *mod, const char *path, const char *args, FULONG *leng
 	
 	DEBUG( "[PHPmod] run app: %s\n", command );
 	
-#define PHP_READ_SIZE 8192	
+//#define PHP_READ_SIZE 8192	
+#define PHP_READ_SIZE 65536
 	
 	char *buf = FMalloc( PHP_READ_SIZE+16 );
 	
@@ -190,7 +191,7 @@ char *Run( struct EModule *mod, const char *path, const char *args, FULONG *leng
 	int errCounter = 0;
 
 	// Initialize the timeout data structure. 
-	timeout.tv_sec = 5;
+	timeout.tv_sec = MOD_TIMEOUT;
 	timeout.tv_usec = 0;
 	
 	while( TRUE )

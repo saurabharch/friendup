@@ -21,6 +21,8 @@ i18n_network                         : Network
 i18n_language                        : Language
 i18n_bookmarks                       : Bookmarks
 i18n_upload_a_file                   : Upload file
+i18n_selected_files                  : Selected files
+i18n_in_total                        : In total
 i18n_deleting_files                  : Deleting files
 i18n_bookmarks_add                   : Add
 i18n_bookmarks_close                 : Close
@@ -425,6 +427,7 @@ i18n_please_choose_a_path               : Please choose a path.
 
 i18n_cancel                             : Cancel
 i18n_moving_files                       : Moving files
+i18n_delete_error                       : Delete error
 i18n_copying_files                      : Copying files
 i18n_filecopy_error                     : Error copying files
 i18n_do_you_want_copy                   : Do you really want to copy these files?
@@ -447,6 +450,12 @@ i18n_volume_permissions                 : Disk permissions
 i18n_drag_to_download_file              : Click or drag to desktop to download.
 i18n_drag_files_to_download             : Drop files to download.
 
+i18n_creating_directory                 : Creating directory
+i18n_building_file_index                : Building file index...
+i18n_counted                            : Counted
+i18n_counted_files                      : files.
+i18n_cleaning_up                        : Cleaning up...
+
 i18n_could_not_download                 : Could not download
 i18n_download_wrong_type                : Only files can be downloaded.
 
@@ -464,6 +473,7 @@ Running tasks : Running tasks
 i18n_read_only                          : Read only
 i18n_task_running                       : task running
 i18n_tasks_running                      : tasks running
+i18n_manage_tasks                       : Manage tasks
 i18n_visible                            : Visible
 i18n_network_activity                   : Network activity
 i18n_today                              : Today
@@ -616,9 +626,12 @@ i18n_day_sun                            : sun
 
 
 i18n_server_disconnected                : Disconnected
-i18n_ws_disconnected                    : Low connectivity
+i18n_ws_disconnected                    : Network offline
 i18n_copy_to_system_clipboard           : Do you want to copy your Friend clipboard to your system clipboard?
 i18n_copy_to_system_clipboard_headline  : Transfer clipboard to system
+
+i18n_directory_too_long                 : Directory took too long to refresh. Are you offline?
+i18n_refresh_when_online                : Refresh directory when online
 
 #File types --------------------------------------------------------------------
 

@@ -86,7 +86,8 @@ static inline ListString *RunPHPScript( const char *command )
 	struct timeval timeout;
 
 	// Initialize the timeout data structure. 
-	timeout.tv_sec = 5;
+
+	timeout.tv_sec = MOD_TIMEOUT;
 	timeout.tv_usec = 0;
 	
 	while( TRUE )
@@ -121,7 +122,7 @@ static inline ListString *RunPHPScript( const char *command )
 		{
 			errCounter++;
 			DEBUG("ErrCounter: %d\n", errCounter );
-			if( errCounter > 3 )
+			if( errCounter > MOD_NUMBER_TRIES )
 			{
 				//char clo[2];
 				//clo[0] = '\'';
@@ -400,11 +401,19 @@ Http *ProtocolHttp( Socket* sock, char* data, unsigned int length )
 		DEBUG("HTTP TIMER\n");
 		return response;
 	}*/
+	
+#ifdef __PERF_MEAS
+	double stime = GetCurrentTimestampD();
+#endif
 
 	DEBUG("[ProtocolHttp] Data delivered %d\n", length );
 	// Continue parsing the request
 	int result = HttpParsePartialRequest( request, data, length );
 
+#ifdef __PERF_MEAS
+	Log( FLOG_INFO, "PERFCHECK: HttpParsePartialRequest time: %f\n", (GetCurrentTimestampD()-stime) );
+#endif
+	
 	partialRequest:
 
 	// Protocol error
@@ -452,6 +461,10 @@ Http *ProtocolHttp( Socket* sock, char* data, unsigned int length )
 	// Request parsed without errors!
 	else if( result == 1 && request->uri->path != NULL )
 	{
+#ifdef __PERF_MEAS
+		stime = GetCurrentTimestampD();
+#endif
+		
 		Log( FLOG_DEBUG, "[ProtocolHttp] Request parsed without problems.\n");
 		Uri *uri = request->uri;
 		Path *path = NULL;
@@ -2021,6 +2034,10 @@ Http *ProtocolHttp( Socket* sock, char* data, unsigned int length )
 		}
 		PathFree( path );
 		Log( FLOG_DEBUG, "HTTP parsed, returning response\n");
+		
+#ifdef __PERF_MEAS
+	Log( FLOG_INFO, "PERFCHECK: Call time: %f\n", ((GetCurrentTimestampD()-stime)) );
+#endif
 
 		return response;
 	}

@@ -1,13 +1,16 @@
 
--include ../Makefile.defs
+-include ../Config.defs
 -include ../Config
 
 CC			=	gcc
 CPP			=	g++
 OUTPUT			=	bin/FriendCore
 
+#`mysql_config --libs`
+#MYSQLLIBSREQ		=	-lmysqlclient -lpthread -lz -lm -lrt -latomic -lssl -lcrypto -ldl
+MYSQLLIBSREQ		=	-lmysqlclient -lpthread -lz -lm -lrt -latomic 
 CFLAGS			=	$(GLOBAL_CFLAGS) -I../libs/ -I../$(LIBWS_INCLUDE_DIR) -I. $(shell mysql_config --cflags) -I../$(LIBXML2_INCLUDE_DIR) -I$(SAMBA_INCLUDE_DIR)  -I../$(LIBSSH2_INCLUDE_DIR)
-LFLAGS			=	../$(LIBWS_LIB_DIR)/libwebsockets.a -Lsystem/bin/ -lm -lssh -lrt -lmagic -lxml2 `mysql_config --libs` -lgd -lpng -lz -ljpeg -luv
+LFLAGS			=	../$(LIBWS_LIB_DIR)/libwebsockets.a -Lsystem/bin/ -lm -lrt -lmagic -lxml2 $(MYSQLLIBSREQ) -lgd -lpng -lz -ljpeg -luv
 DFLAGS			=	-M $(CFLAGS)  
 FPATH			=	$(shell pwd)
 
@@ -34,6 +37,10 @@ ifeq ($(USE_SSH_THREADS_LIB),1)
 LFLAGS					+=      -lssh_threads
 endif
 
+ifeq ($(ENABLE_SSH),1)
+LFLAGS					+=	-lssh
+endif
+
 ifeq ($(USE_SANITIZER),1)
 LFLAGS					+=	-lasan
 endif
@@ -42,6 +49,10 @@ ifeq ($(DEBUG),1)
 CFLAGS					+=	-D__DEBUG -O0 -g
 else
 CFLAGS					+=	-O2
+endif
+
+ifeq ($(PERF_MEAS),1)
+CFLAGS					+=	-D__PERF_MEAS
 endif
 
 ifeq ($(PROFILE),1)
@@ -78,7 +89,7 @@ endif
 C_FILES := $(wildcard main.c core/*.c system/cache/*.c network/*.c system/services/*.c util/*.c class/*.c ssh/*.c hardware/*.c system/*.c \
 			system/dictionary/*.c system/module/*.c system/fsys/*.c system/json/*.c system/user/*.c util/log/*.c system/inram/*.c system/invar/*.c system/application/*.c system/auth/*.c \
 			hardware/usb/*.c hardware/printer/*.c system/datatypes/images/*.c system/log/*.c system/admin/*.c communication/*.c system/autotask/*.c system/token/*.c \
-			websockets/*.c security/*.c webdav/*.c system/connection/*.c mobile_app/*.c mutex/*.c system/usa/*.c system/mobile/*.c system/calendar/*.c config/*.c system/notification/*.c system/usergroup/*.c system/permission/*.c )
+			websockets/*.c security/*.c webdav/*.c system/connection/*.c mobile_app/*.c mutex/*.c system/usa/*.c system/mobile/*.c system/calendar/*.c config/*.c system/notification/*.c system/usergroup/*.c system/permission/*.c system/roles/*.c )
 OBJ_FILES := $(addprefix obj/,$(notdir $(C_FILES:.c=.o)))
 
 ALL:	$(OBJ_FILES) $(OUTPUT) $(MODS) $(FSYS) $(LOGGERS) $(SERVICES)
@@ -186,6 +197,7 @@ phpserv: system/servicesdyn/service_php.c ../core/obj/thread_linux.o ../core/obj
 
 $(OUTPUT): $(OBJ_FILES)
 	@echo "\033[34mLinking ...\033[0m"
+	#@echo "\n\n\n\n %(LFLAGS) \n\n\n\"
 	$(CC) -o $(OUTPUT) $(OBJ_FILES) $(LFLAGS)
 
 obj/%.o: %.c *.h %.d
@@ -349,6 +361,10 @@ obj/%.o: system/notification/%.c system/notification/*.h system/notification/%.d
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 obj/%.o: system/permission/%.c system/permission/*.h system/permission/%.d
+	@echo "\033[34mCompile ...\033[0m"
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/%.o: system/roles/%.c system/roles/*.h system/roles/%.d
 	@echo "\033[34mCompile ...\033[0m"
 	$(CC) $(CFLAGS) -c -o $@ $<
 	

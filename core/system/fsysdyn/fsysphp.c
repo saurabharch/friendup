@@ -216,7 +216,7 @@ ListString *PHPCall( const char *command )
 	struct timeval timeout;
 
 	// Initialize the timeout data structure. 
-	timeout.tv_sec = 5;
+	timeout.tv_sec = MOD_TIMEOUT;
 	timeout.tv_usec = 0;
 
 	while( TRUE )
@@ -247,7 +247,7 @@ ListString *PHPCall( const char *command )
 		else
 		{
 			errCounter++;
-			if( errCounter > 3 )
+			if( errCounter > MOD_NUMBER_TRIES )
 			{
 				//FERROR("Error in popen, Quit! Command: %s\n", command );
 				break;
@@ -451,7 +451,7 @@ void *Mount( struct FHandler *s, struct TagItem *ti, User *usr, char **mountErro
 						if( strncmp( result->ls_Data, "ok", 2 ) != 0 )
 						{
 							DEBUG( "[fsysphp] Failed to mount device %s..\n", name );
-							DEBUG( "[fsysphp] Output was: %s\n", result->ls_Data );
+							//DEBUG( "[fsysphp] Output was: %s\n", result->ls_Data );
 							if( sd->module ) FFree( sd->module );
 							//if( dev->f_SessionID ) FFree( dev->f_SessionID );
 							if( sd->type ) FFree( sd->type );
@@ -528,6 +528,7 @@ int Release( struct FHandler *s, void *f )
 			if( sd->module ){ FFree( sd->module ); }
 			if( sd->type ){ FFree( sd->type ); }
 			FFree( lf->f_SpecialData );
+			lf->f_SpecialData = NULL;
 		}
 	}
 	return 0;
@@ -736,12 +737,18 @@ void *FileOpen( struct File *s, const char *path, char *mode )
 	{
 		char tmpfilename[ 712 ];
 		int lockf = -1;
+		struct timeval  tv;
+		gettimeofday(&tv, NULL);
+
+		double timeInMill = 
+         (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ; // convert tv_sec & tv_usec to millisecond
 
 		// Make sure we can make the tmp file unique with lock!
 		int retries = 100;
 		do
 		{
-			snprintf( tmpfilename, sizeof(tmpfilename), "/tmp/%s_read_%d%d%d%d", s->f_SessionIDPTR, rand()%9999, rand()%9999, rand()%9999, rand()%9999 );
+			//snprintf( tmpfilename, sizeof(tmpfilename), "/tmp/%s_read_%d%d%d%d", s->f_SessionIDPTR, rand()%9999, rand()%9999, rand()%9999, rand()%9999 );
+			snprintf( tmpfilename, sizeof(tmpfilename), "/tmp/%s_read_%f%d%d", s->f_SessionIDPTR, timeInMill, rand()%9999, rand()%9999 );
 			//DEBUG( "[fsysphp] Trying to lock %s\n", tmpfilename );
 			if( ( lockf = open( tmpfilename, O_CREAT|O_EXCL|O_RDWR ) ) >= 0 )
 			{

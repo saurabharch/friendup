@@ -34,6 +34,7 @@ Workspace = {
 	themeOverride: false,
 	systemInfo: false,
 	websocketsOffline: true,
+	workspaceIsDisconnected: false,
 	lastfileSystemChangeMessage: false,
 	serverIsThere: false,
 	runLevels: [
@@ -161,6 +162,10 @@ Workspace = {
 		// Make links to screen on this object
 		this.screen = wbscreen;
 		this.screenDiv = wbscreen.div;
+		
+		var tray = document.createElement( 'div' );
+		tray.id = 'Tray';
+		this.screenDiv.appendChild( tray );
 
 		// Init the deepest field
 		if( !isMobile )
@@ -214,7 +219,7 @@ Workspace = {
 					o = {
 						width: 400,
 						height: 300,
-						valign: 'top',
+						top: Workspace.screen.contentDiv.offsetTop,
 						halign: 'right',
 						scrolling: false,
 						autosize: true
@@ -252,6 +257,7 @@ Workspace = {
 				}
 				if( !ex.widget.shown )
 					ex.widget.showWidget();
+				else ex.widget.hide();
 				return cancelBubble( e );
 			}
 			ex.onclick = Workspace.calendarClickEvent;
@@ -331,7 +337,6 @@ Workspace = {
 
 		// Create default desklet
 		var mainDesklet = CreateDesklet( this.screenDiv, 64, 480, 'right' );
-		mainDesklet.dom.style.zIndex = 2147483641;
 
 		// Add desklet to dock
 		this.mainDock = mainDesklet;
@@ -719,21 +724,24 @@ Workspace = {
 	},
 	flushSession: function()
 	{
-		this.sessionId = null;
+		this.sessionId = '';
 		localStorage.removeItem( 'WorkspaceSessionID' );
 	},
 	// When session times out, use log in again...
-	relogin: function()
+	relogin: function( callback )
 	{
 		// While relogging in or in a real login() call, just skip
 		if( this.reloginInProgress || this.loginCall ) return;
 		
-		console.log( 'Test2: Relogin in progress' );
+		// Kill all http connections that would block
+		_cajax_http_connections = 0;
+		
+		//console.log( 'Test2: Relogin in progress' );
 		
 		var self = this;
 		
-		function executeCleanRelogin()
-		{	
+		function killConn()
+		{
 			if( Workspace.conn )
 			{
 				try
@@ -742,17 +750,23 @@ Workspace = {
 				}
 				catch( e )
 				{
-					console.log( 'Could not close conn.' );
+					//console.log( 'Could not close conn.' );
 				}
 				delete Workspace.conn;
 			}
-			Workspace.flushSession();
+		}
+		
+		function executeCleanRelogin()
+		{	
+			killConn();
 			
 			if( Workspace.loginUsername && Workspace.loginPassword )
 			{
 				// // console.log( 'Test2: Regular login with user and pass' );
 				var u = typeof( Workspace.loginUsername ) == 'undefined' ? false : Workspace.loginUsername;
 				var p = typeof( Workspace.loginPassword ) == 'undefined' ? false : Workspace.loginPassword;
+				if( !( !!u && !!p ) )
+					Workspace.flushSession();
 				Workspace.login( u, p, false, Workspace.initWebSocket );
 			}
 			// Friend app waits some more
@@ -774,10 +788,14 @@ Workspace = {
 		this.reloginAttempts = true;
 		
 		// See if we are alive!
+		// Cancel relogin context
+		CancelCajaxOnId( 'relogin' );
+		
 		var m = new Module( 'system' );
+		m.cancelId = 'relogin';
 		m.onExecuted = function( e, d )
 		{
-			// // console.log( 'Test2: Got back: ', e, d );
+			//console.log( 'Test2: Got back: ', e, d );
 			
 			self.reloginAttempts = false;
 			Workspace.reloginInProgress = true;
@@ -796,23 +814,29 @@ Workspace = {
 				try
 				{
 					var js = JSON.parse( d );
-					if( parseInt( d.code ) == 3 || parseInt( d.code ) == 11 )
+					// Session authentication failed
+					if( parseInt( js.code ) == 3 || parseInt( js.code ) == 11 )
 					{
-						// // console.log( 'Test2: Flush session' );
+						// console.log( 'Test2: Flush session' );
 						Workspace.flushSession();
+						Workspace.reloginInProgress = false;
+						return executeCleanRelogin();
 					}
 				}
 				catch( n )
 				{
+					killConn();
+					console.log( 'Error running relogin.', n );
 				}
 			}
 			if( Workspace.serverIsThere )
 			{
-				// // console.log( 'Test2: Clean relogin' );
+				// console.log( 'Test2: Clean relogin' );
 				executeCleanRelogin();
 			}
 			else
 			{
+				killConn();
 				// // console.log( 'Test2: Wait a second before you can log in again.' );
 				// Wait a second before trying again
 				setTimeout( function()
@@ -824,7 +848,7 @@ Workspace = {
 		m.forceHTTP = true;
 		m.forceSend = true;
 		m.execute( 'usersettings' );
-		// // console.log( 'Test2: Getting usersettings.' );
+		// console.log( 'Test2: Getting usersettings.' );
 	},
 	// Renews session ids for cajax and executes ajax queue!
 	renewAllSessionIds: function( session )
@@ -832,14 +856,14 @@ Workspace = {
 		if( session )
 			this.sessionId = session;
 		
+		// Reset this in this case
+		_cajax_http_connections = 0;
+		
 		// Check if there's a queue of objects waiting to run
 		if( Friend.cajax && Friend.cajax.length )
 		{
 			for( var a = 0; a < Friend.cajax.length; a++ )
 			{
-				Friend.cajax[a].addVar( 'sessionid', Workspace.sessionId );
-				Friend.cajax[a].forceHTTP = true;
-				Friend.cajax[a].open();
 				Friend.cajax[a].send();
 			}
 			Friend.cajax = [];
@@ -849,7 +873,7 @@ Workspace = {
 	{
 		if( sessionid )
 		{
-			console.log( 'Test2: Logging in with sessionid.' );
+			//console.log( 'Test2: Logging in with sessionid.' );
 			
 			var _this = this;
 			
@@ -925,7 +949,7 @@ Workspace = {
 	{
 		var self = this;
 		
-		console.log( 'Test2: Normal login.' );
+		//console.log( 'Test2: Normal login.' );
 		
 		// Test if we have a stored session
 		var sess = localStorage.getItem( 'WorkspaceSessionID' );
@@ -970,7 +994,7 @@ Workspace = {
 		// Require username and pw to login
 		if( !u || !p || typeof( u ) == 'undefined' )
 		{
-			// console.log( 'Test3: Doing the login test.' );
+			//console.log( 'Test3: Doing the login test.', u, p );
 			// Login by url vars
 			var gu = GetUrlVar( 'username' );
 			var gp = GetUrlVar( 'password' );
@@ -988,15 +1012,22 @@ Workspace = {
 		}
 
 		var t = this;
-		this.loginUsername = u;
+		
+		// p and u needs trushy true! :-)
+		if( !!p & !!u )
+		{
+			this.loginUsername = u;
 
-		if( p.indexOf('HASHED') == 0 )
-		{
-			this.loginPassword = p;
-		}
-		else
-		{
-			this.loginPassword = 'HASHED' + Sha256.hash( p );
+			if( p.indexOf( 'HASHED' ) == 0 )
+			{
+				this.loginPassword = p;
+				//console.log( 'SET LOGIN PASSWORD = ' + p );
+			}
+			else
+			{
+				this.loginPassword = 'HASHED' + Sha256.hash( p );
+				//console.log( 'SET HASHED PASSWORD = ' + p );
+			}
 		}
 
 		if( typeof( this.loginUsername ) != 'undefined' && this.loginUsername && this.loginPassword )
@@ -1022,21 +1053,25 @@ Workspace = {
 			var m = new FriendLibrary( 'system' );
 			this.loginCall = m;
 
+			var triedWithSession = false;
+	
 			if( this.loginUsername && typeof( this.loginUsername ) != 'undefined' )
 			{
 				m.addVar( 'username', this.loginUsername );
 				m.addVar( 'password', this.loginPassword );
+				//console.log( 'Adding U and P: ', this.loginUsername, this.loginPassword );
+			}
+			else if( this.sessionId )
+			{
+				m.addVar( 'sessionid', this.sessionId );
+				triedWithSession = true;
 			}
 			
 			m.addVar( 'deviceid', GetDeviceId() );
-			if( this.sessionId )
-			{
-				m.addVar( 'sessionid', this.sessionId );
-			}
 
 			m.onExecuted = function( json, serveranswer )
 			{
-				// // console.log( 'Test2: We executed a login query', json, serveranswer );
+				//console.log( 'Test2: We executed a login query', json, serveranswer );
 				
 				if( typeof( json ) != 'object' )
 				{
@@ -1111,6 +1146,16 @@ Workspace = {
 					window.localStorage.removeItem( 'WorkspaceUsername' );
 					window.localStorage.removeItem( 'WorkspacePassword' );
 					
+					// Session is totally dead - go back to login screen
+					if( triedWithSession )
+					{
+						console.log( '[Workspace] Logged out due to expired session and erroneous username and password.' );
+						if( window.friendApp && friendApp.exit )
+							friendApp.exit();
+						else Workspace.logout();
+						return;
+					}
+					
 					Workspace.reloginInProgress = false;
 					
 					if( t.loginPrompt )
@@ -1155,7 +1200,7 @@ Workspace = {
 	{
 		if( this.encryption.keys.client )
 		{
-			console.log( 'Remembering.' );
+			//console.log( 'Remembering.' );
 			ApplicationStorage.save( 
 				{
 					privatekey  : this.encryption.keys.client.privatekey,
@@ -1308,11 +1353,13 @@ Workspace = {
 				'webclient/js/io/friendnetworkextension.js;' +
 				'webclient/js/io/friendnetworkdoor.js;' +
 				'webclient/js/io/friendnetworkapps.js;' +
+				'webclient/js/io/workspace_fileoperations.js;' + 
 				'webclient/js/io/DOS.js;' +
 				'webclient/3rdparty/favico.js/favico-0.3.10.min.js;' +
 				'webclient/js/gui/widget.js;' +
 				'webclient/js/gui/listview.js;' +
 				'webclient/js/gui/directoryview.js;' +
+				'webclient/js/io/directoryview_fileoperations.js;' +
 				'webclient/js/gui/menufactory.js;' +
 				'webclient/js/gui/workspace_menu.js;' +
 				'webclient/js/gui/deepestfield.js;' +
@@ -1383,7 +1430,15 @@ Workspace = {
 					// New translations
 					i18n_translations = [];
 					
-					var decoded = JSON.parse( d );
+					var decoded = false;
+					try
+					{
+						decoded = JSON.parse( d );
+					}
+					catch( e )
+					{
+						//console.log( 'This: ', d );
+					}
 
 					// Add it!
 					i18nClearLocale();
@@ -1467,8 +1522,16 @@ Workspace = {
 						{
 							if( e == 'ok' )
 							{
-								var s = JSON.parse( d );
-								if( s.Theme && s.Theme.length )
+								var s = {};
+								try
+								{
+									s = JSON.parse( d );
+								}
+								catch( e )
+								{ 
+									s = {}; 
+								};
+								if( s && s.Theme && s.Theme.length )
 								{
 									_this.refreshTheme( s.Theme.toLowerCase(), false );
 								}
@@ -1527,4 +1590,14 @@ Workspace = {
 		Workspace.logoutURL = logoutURL;
 	}
 };
+
+window.onoffline = function()
+{
+	Workspace.workspaceIsDisconnected = true;
+}
+window.ononline = function()
+{
+	Workspace.workspaceIsDisconnected = false;
+}
+
 

@@ -257,6 +257,7 @@ FriendWebSocket.prototype.doReconnect = function()
 		if ( !allow )
 		{
 			console.log( 'not allowed to reconnect', checks )
+			// Try to do a module call
 			return false;
 		}
 		return true;
@@ -299,7 +300,7 @@ FriendWebSocket.prototype.setState = function( type, data )
 		type: type,
 		data: data,
 	};
-	console.log( 'State: ', this.state );
+	//console.log( 'State: ', this.state );
 	if( this.onstate ) this.onstate( this.state );
 }
 
@@ -342,14 +343,15 @@ FriendWebSocket.prototype.handleSocketMessage = function( e )
 			e.data );
 		return;
 	}
-	
+	console.log( msg );
 	// Handle server notices with session timeout / death
 	if( msg.data && msg.data.type == 'server-notice' )
 	{
+		
 		if( msg.data.data == 'session killed' )
 		{
-			//Notify( { title: i18n( 'i18n_session_killed' ), text: i18n( 'i18n_session_killed_desc' ) } );
-			// console.log( 'Test3: Session was killed!' );
+			Notify( { title: i18n( 'i18n_session_killed' ), text: i18n( 'i18n_session_killed_desc' ) } );
+			 console.log( 'Test3: Session was killed!' );
 			this.handleClose();
 			
 			setTimeout( function()
@@ -805,7 +807,7 @@ FriendWebSocket.prototype.handleChunk = function( chunk )
 		*/
 		
 		// well, then, try b64 decode
-		var notB64 = atob( whole );
+		var notB64 = window.Base64alt ? Base64alt.decode( whole ) : atob( whole );
 		var parsed = friendUP.tool.objectify( notB64 );
 		return parsed;
 	}

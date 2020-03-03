@@ -67,7 +67,13 @@ int UnMountFS( DeviceManager *dm, struct TagItem *tl, User *usr, UserSession *us
 //
 //
 
-int MountFS( DeviceManager *dm, struct TagItem *tl, File **mfile, User *usr, char **mountError, FBOOL calledByAdmin );
+int MountFS( DeviceManager *dm, struct TagItem *tl, File **mfile, User *usr, char **mountError, FBOOL calledByAdmin, FBOOL notify );
+
+//
+//
+//
+
+int UserGroupMountWorkgroupDrives( DeviceManager *dm, User *usr, FULONG groupID );
 
 //
 //

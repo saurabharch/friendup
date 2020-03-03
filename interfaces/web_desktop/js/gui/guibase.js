@@ -10,7 +10,7 @@
 
 /* Some important flags for GUI elements ------------------------------------ */
 
-var DEFAULT_SANDBOX_ATTRIBUTES = 'allow-same-origin allow-forms allow-scripts allow-popups';
+var DEFAULT_SANDBOX_ATTRIBUTES = 'allow-same-origin allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox';
 var FUI_MOUSEDOWN_RESIZE  =  2;
 var FUI_MOUSEDOWN_WINDOW  =  1;
 var FUI_MOUSEDOWN_SCREEN  =  3;
@@ -668,12 +668,15 @@ var mousePointer =
 		if( e ) target = e.target || e.srcElement;
 		
 		this.testPointer ();
+		
 		// Check multiple (pickup multiple)
 		var multiple = false;
 		if ( ele.window )
 		{
 			if( ele.window.windowObject && ele.window.windowObject.refreshing ) return;
-			_ActivateWindowOnly( ele.window.parentNode );
+			if( !ele.window.parentNode.classList.contains( 'Active'  ))
+				_ActivateWindowOnly( ele.window.parentNode );
+			
 			for( var a = 0; a < ele.window.icons.length; a++ )
 			{
 				var ic = ele.window.icons[a];
@@ -687,16 +690,35 @@ var mousePointer =
 					el.oldStyle.top = el.style.top;
 					el.oldStyle.left = el.style.left;
 					el.oldStyle.position = el.style.position;
-					el.style.top = 'auto';
-					el.style.left = 'auto';
-					el.style.position = 'relative';
+					el.style.top = el.offsetTop + 'px';
+					el.style.left = el.offsetLeft + 'px';
+					el.style.position = 'absolute';
 					el.oldParent = el.parentNode;
 					if( typeof ele.window.icons[a+1] != 'undefined' )
 						el.sibling = ele.window.icons[a+1].domNode;
-					el.parentNode.removeChild( el );
+					if( el.parentNode )
+					{
+						el.parentNode.removeChild( el );
+					}
 					this.dom.appendChild( el );
 					this.elements.push( el );
 				}
+			}
+			// Align with top left corner
+			var maxx = 99999;
+			var maxy = 99999;
+			var elements = this.elements;
+			for( var a = 0; a < elements.length; a++ )
+			{
+				if( parseInt( elements[ a ].style.left ) < maxx )
+					maxx = parseInt( elements[ a ].style.left );
+				if( parseInt( elements[ a ].style.top ) < maxy )
+					maxy = parseInt( elements[ a ].style.top );
+			}
+			for( var a = 0; a < elements.length; a++ )
+			{
+				elements[ a ].style.left = parseInt( elements[ a ].style.left ) - maxx + 'px';
+				elements[ a ].style.top = parseInt( elements[ a ].style.top ) - maxy + 'px';
 			}
 		}
 		// Pickup single
@@ -2127,14 +2149,7 @@ function DrawRegionSelector( e )
 	{
 		var d = document.createElement( 'div' );
 		d.id = 'RegionSelector';
-		
 		window.regionWindow.appendChild( d );
-		if( document.body.attachEvent )
-		{
-			d.style.border = '1px solid #000000';
-			d.style.background = '#555555';
-			d.style.filter = 'alpha(opacity=50)';
-		}
 	}
 	
 	// Extra offset in content window
@@ -2156,8 +2171,8 @@ function DrawRegionSelector( e )
 		// Some implications per theme accounted for
 		if( rwc.contains( 'Content' ) )
 		{
-			var top = GetThemeInfo( 'ViewTitle' );
-			if( top ) ey -= parseInt( top.height );
+			var top = window.regionWindow.windowObject;
+			if( top ) ey -= window.regionWindow.windowObject._window.parentNode.titleBar.offsetHeight;
 			var bor = GetThemeInfo( 'ScreenContentMargins' );
 			if( bor ) ey += parseInt( bor.top );
 		}
@@ -2303,17 +2318,19 @@ function DrawRegionSelector( e )
 					// Combine all
 					var intersecting = intersecting1 || intersecting2 || intersecting3 || intersecting4 || intersecting5 || intersecting6;
 				
-					if ( overlapping || intersecting )
+					if( overlapping || intersecting )
 					{
 						ics.classList.add( 'Selected' );
 						ics.fileInfo.selected = 'multiple';
 						ics.selected = 'multiple';
+						icos[a].selected = 'multiple';
 					}
-					else if ( !sh )
+					else if( !sh )
 					{
 						ics.classList.remove( 'Selected' );
 						ics.fileInfo.selected = false;
 						ics.selected = false;
+						icos[a].selected = false;
 					}
 				}
 			}
@@ -2452,6 +2469,12 @@ movableMouseUp = function( e )
 			Workspace.toggleStartMenu( false );
 	}
 	
+	for( var a in movableWindows )
+	{
+		var m = movableWindows[a];
+		m.removeAttribute( 'moving' );
+	}
+	
 	ExposeScreens(); 
 	ExposeWindows();
 	
@@ -2475,7 +2498,12 @@ movableMouseUp = function( e )
 	{
 		if( Workspace.iconContextMenu )
 		{
-			Workspace.iconContextMenu.hide();
+			Workspace.iconContextMenu.dom.querySelector( '.MenuItems' ).classList.add( 'Closing' );
+			Workspace.iconContextMenu.dom.querySelector( '.MenuItems' ).classList.remove( 'Open' );
+			setTimeout( function()
+			{
+				Workspace.iconContextMenu.hide();
+			}, 150 );
 		}
 	}
 	
@@ -2509,6 +2537,10 @@ function CheckScreenTitle( screen, force )
 {	
 	var testObject = screen ? screen : window.currentScreen;
 	if( !testObject && !force ) return;
+	
+	// Orphan node!
+	if( window.currentMovable && !( window.currentMovable.parentNode && window.currentMovable.parentNode.parentNode ) )
+		window.currentMovable = null;
 	
 	// If nothing changed, don't change
 	if( prevScreen && prevWindow && !force )
@@ -2721,7 +2753,6 @@ function PollTaskbar( curr )
 					ge( 'Statusbar' ).className = 'Docklist';
 				
 					var dlet = dlets[ 0 ];
-					dlet.style.zIndex = 2147483641;
 					var d = document.createElement( 'div' );
 					d.id = 'DockWindowList';
 					d.className = 'WindowList';
@@ -2776,18 +2807,6 @@ function PollTaskbar( curr )
 			else
 			{
 				var right = '0';
-				if( ge( 'Tray' ) )
-				{
-					if( Workspace.mainDock && Workspace.mainDock.conf.size )
-					{
-						var rems = [ 'Size80', 'Size59', 'Size32', 'Size16' ];
-						for( var a = 0; a < rems.length; a++ )
-							ge( 'Tray' ).classList.remove( rems[a] );
-						ge( 'Tray' ).classList.add( 'Size' + Workspace.mainDock.conf.size );
-					}
-					dlength += ge( 'Tray' ).offsetWidth;
-					right = ge( 'Tray' ).offsetWidth;
-				}
 				baseElement.style.width = 'calc(100% - ' + dlength + 'px)';
 				baseElement.style.right = right + 'px';
 				baseElement.style.height = '100%';
@@ -3114,8 +3133,13 @@ function PollTaskbar( curr )
 								}
 							}
 						}
+						
+						// Need some help? Only show help if parent element is aligned left or right
+						CreateHelpBubble( d, d.window.titleString, false, { getOffsetTop: function(){ return t.scrollTop; }, positions: [ 'Left', 'Right' ] } );
+						
 						t.appendChild( d );
 						d.origWidth = d.offsetWidth + 20;
+						
 			
 						// Check if we opened a window with a task image
 						if( d.applicationId )
@@ -3554,7 +3578,13 @@ movableMouseDown = function ( e )
 	window.focus();
 	
 	// Close tray bubble
-	CloseTrayBubble();
+	if( ge( 'Tray' ) && ge( 'Tray' ).notificationPopup )
+	{
+		if( e.target && e.target != ge( 'Tray' ).notificationPopup.parentNode )
+		{
+			CloseTrayBubble();
+		}
+	}
 	
 	// Menu trigger
 	var rc = 0;
@@ -3693,6 +3723,15 @@ movableMouseDown = function ( e )
 		
 		return cancelBubble( 2 );
 	}
+	else if ( isMobile && ( clickonDesktop || clickOnView ) )
+	{
+		// TODO: Perhaps scroll shouldn't deselect
+		if( clickOnView )
+		{
+			clearRegionIcons( { force: true } );
+		}
+		
+	}
 }
 
 // Go into standard Workspace user mode (f.ex. clicking on wallpaper)
@@ -3713,7 +3752,8 @@ function convertIconsToMultiple()
 			if( ics[a].selected )
 			{
 				ics[a].selected = 'multiple';
-				ics[a].domNode.selected = 'multiple';
+				if( ics[ a ].domNode )
+					ics[a].domNode.selected = 'multiple';
 				if( ics[a].fileInfo )
 					ics[a].fileInfo.selected = 'multiple';
 			}
@@ -3752,6 +3792,8 @@ function clearRegionIcons( flags )
 					{
 						ic.classList.remove( 'Selected' );
 						w.icons[a].selected = false;
+						w.icons[a].file = false;
+						ic.selected = false;
 					}
 					ic.classList.remove( 'Editing' );
 					if( ic.input )
@@ -3777,7 +3819,9 @@ function clearRegionIcons( flags )
 			if( exception != ic && ic.selected != multipleCheck )
 			{
 				ic.classList.remove( 'Selected' );
+				icon.file.selected = false;
 				icon.selected = false;
+				ic.selected = false;
 			}
 		}
 	}
@@ -3875,6 +3919,8 @@ function InitGuibaseEvents()
 		// On blur, activate current movable (don't put it to front)
 		window.addEventListener( 'blur', function( e )
 		{
+			// Refresh the tray
+			PollTray();
 			
 			var viewObject = null;
 			if( document.activeElement )
@@ -3934,11 +3980,15 @@ function FocusOnNothing()
 	for( var a in movableWindows )
 	{
 		if( movableWindows[a].windowObject )
+		{
 			movableWindows[a].windowObject.sendMessage( { command: 'blur' } );
+		}
 	}
 	var eles = document.getElementsByTagName( '*' );
 	for( var a = 0; a < eles.length; a++ )
+	{
 		eles[a].blur();
+	}
 	// Why not focus on window!?
 	window.focus();
 }
@@ -4065,7 +4115,7 @@ function FindImageColorProduct( img )
 /* This is bubbles for showing localized help on Workspace scoped elements.   */
 /* TODO: Support API scoped elements...                                       */
 
-function CreateHelpBubble( element, text, uniqueid )
+function CreateHelpBubble( element, text, uniqueid, rules )
 {
 	if( isMobile || isTablet ) return;
 	if( !element || !text ) return;
@@ -4074,6 +4124,7 @@ function CreateHelpBubble( element, text, uniqueid )
 	{
 		element.helpBubble.close();
 	}
+	
 	var helpBubble = {
 		destroy: function()
 		{
@@ -4103,6 +4154,50 @@ function CreateHelpBubble( element, text, uniqueid )
 				helpBubble.destroy();
 				return;
 			}
+			
+			// Check parent
+			var positionClass = '';
+			var p = e.target ? e.target.parentNode : false;
+			
+			// Also check parent
+			if( p )
+			{
+				for( var a = 0; a < 2; a++ )
+				{
+					var found = false;
+					if( p.getAttribute( 'position' ) )
+					{
+						switch( p.getAttribute( 'position' ) )
+						{
+							case 'right_center':
+							case 'right_top':
+							case 'right_bottom':
+								positionClass = 'Right';
+								break;
+							case 'left_center':
+							case 'left_top':
+							case 'left_bottom':
+								positionClass = 'Left';
+								break;
+							case 'bottom_left':
+							case 'bottom_center':
+							case 'bottom_right':
+								positionClass = 'Bottom';
+								break;
+							case 'top_left':
+							case 'top_center':
+							case 'top_right':
+								positionClass = 'Top';
+								break;
+							default:
+								break;
+						}
+					}
+					if( !!positionClass ) break;
+					p = p.parentNode;
+				}
+			}
+			
 			var mx = windowMouseX;
 			var my = windowMouseY;
 			var mt = GetElementTop( element ) - ( 50 + 10 );
@@ -4116,24 +4211,44 @@ function CreateHelpBubble( element, text, uniqueid )
 			mx = GetElementLeft( element ) + ( GetElementWidth( element ) >> 1 ) - ( textWidth.width >> 1 ) - 30;
 			
 			// Check element position
-			var attr = element.parentNode.getAttribute( 'position' );
-			if( attr )
+			if( positionClass )
 			{
-				if( attr.indexOf( 'right' ) == 0 )
+				if( positionClass == 'Right' )
 				{
-					mt = GetElementTop( element );
-					mx = GetElementLeft( element ) - ( textWidth.width + 40 );
+					mt = GetElementTop( element ) + 5;
+					mx = GetElementLeft( element ) - Math.floor( textWidth.width + 90 );
 					posset = true;
 				}
-				else if( attr.indexOf( 'left' ) == 0 )
+				else if( positionClass == 'Left' )
 				{
-					mt = GetElementTop( element );
-					mx = GetElementLeft( element ) + GetElementWidth( element.parentNode ) + 30;
+					mt = GetElementTop( element ) + 5;
+					mx = GetElementLeft( element ) + GetElementWidth( element.parentNode ) + 10;
 					posset = true;
 				}
-				else if( attr.indexOf( 'top' ) == 0 )
+				else if( positionClass == 'Top' )
 				{
-					mt = GetElementTop( element.parentNode ) + GetElementHeight( element.parentNode );
+					mt = GetElementTop( element.parentNode ) + GetElementHeight( element.parentNode ) + 25;
+				}
+			}
+			
+			// Nudge
+			if( rules )
+			{
+				if( !!rules.offsetTop )
+				{
+					mt -= rules.offsetTop;
+				}
+				if( !!rules.offsetLeft )
+				{
+					mx -= rules.offsetLeft;
+				}
+				if( !!rules.getOffsetTop )
+				{
+					mt -= rules.getOffsetTop();
+				}
+				if( !!rules.getOffsetLeft )
+				{
+					mx -= rules.getOffsetLeft();
 				}
 			}
 			
@@ -4150,10 +4265,39 @@ function CreateHelpBubble( element, text, uniqueid )
 			
 			d.innerHTML = text;
 			v.setFlag( 'width', textWidth.width + 60 );
+			v.setFlag( 'left', mx );
+			v.setFlag( 'top', mt );
 			v.setContent( '<div class="TextCenter Padding Ellipsis">' + text + '</div>' );
 			v.dom.addEventListener( 'mouseout', element.helpBubble.outListener );
 			v.dom.classList.add( 'HelpBubble' );
-			v.show();
+			
+			// Remove all position classes and add right one
+			var pcl = [ 'Left', 'Top', 'Right', 'Bottom' ];
+			if( rules && rules.positions )
+				pcl = rules.positions;
+			for( var z = 0; z < pcl.length; z++ )
+				if( pcl[ a ] != positionClass )
+					v.dom.classList.remove( pcl[ a ] );
+			if( v.dom.className.length && positionClass )
+				v.dom.classList.add( positionClass );
+			else if( positionClass ) v.dom.className = positionClass;
+			
+			var show = true;
+			if( pcl )
+			{
+				var f = false;
+				for( var a in pcl )
+				{
+					if( positionClass == pcl[ a ] )
+					{
+						f = true;
+						break;
+					}
+				}
+				show = f;
+			}
+			if( show )
+				v.show();
 			element.helpBubble.widget = v;
 		},
 		outListener: function( e )

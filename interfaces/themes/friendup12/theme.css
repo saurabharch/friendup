@@ -34,6 +34,7 @@
 	$ColorText:              #333333;
 	$ColorButton:            #f0f0f0;
 	$ColorBgButton:          #455155;
+	$ColorBgButtonAlt:       #34495E;
 	$ColorButtonHover:       #f0f0f0;
 	$ColorBgButtonHover:     #556368;
 	$ColorSelect:            #333333;
@@ -67,8 +68,11 @@
 	$ColorDialogHeader:      #f0f0f0;
 	$ColorPositive:          #333333;
 	$ColorNegative:          #f0f0f0;
+	$ColorNegativeAlt:       #34495E;
 	$ColorBgPositive:        #cfcfcf;
+	$ColorBgPositiveAlt:     #f0f0f0;
 	$ColorBgNegative:        #3f3f3f;
+	$ColorBgNegativeAlt:     #34495E;
 	$ColorBgHighlight:       #818181;
 	$ColorHighlight:         #e0e0e0;
 	$ColorSelect:            #f0f0f0;
@@ -303,21 +307,28 @@ html body #DoorsScreen .Left > .VirtualWorkspaces
 
 html #DoorsScreen .Left > .VirtualWorkspaces > div
 {
-	height: 18px;
-	margin: 4px 5px 0 0 !important;
+	height: 16px;
+	margin: 5px 6px 0 0 !important;
 	border-radius: 3px;
-	line-height: 16px;
+	line-height: 14px;
+	overflow: hidden;
+	border: 1px solid rgba(69, 81, 85, 0.4);
+}
+
+html #DoorsScreen .Left > .VirtualWorkspaces > div.Active
+{
+	background: #455155;
 }
 
 html #DoorsScreen .Left > .VirtualWorkspaces > div:first-child
 {
-	margin-left: 10px !important;
+	margin-left: 6px !important;
 }
 
 html #DoorsScreen .Left > .VirtualWorkspaces > div > span
 {
 	font-weight: normal;
-	font-size: 0.9em;
+	font-size: 0.8em;
 }
 
 html #DoorsScreen .Left > .VirtualWorkspaces > div.Active > span
@@ -719,6 +730,7 @@ html > body > div button, html > body > div .Button
 	transition: background-color 0.25s;
 	color: #2a2a2a;
 	padding: 5px 10px;
+	font-size: 0.9em;
 }
 
 html body button.IconButton:not(:hover), 
@@ -817,6 +829,51 @@ html .TrayElement.PopNotification .PopInfo
 {
 	padding: $PaddingBox;
 	box-sizing: border-box;
+}
+
+html body[mobile] .Dialog,
+html body[mobile] .Dialog > .DialogHeader, 
+html body[mobile] .Dialog > .DialogButtons
+{
+	background-color: rgba(0,0,0,0.6);
+	color: #ffffff;
+}
+
+html body[mobile] .Dialog > .ScrollArea:before
+{
+	font-family: FontAwesome;
+	color: #ffdd00;
+	content: "\f071";
+	font-size: 220%;
+	display: block;
+	float: left;
+	margin: 7px 10px 0 0;
+}
+
+html body[mobile] .Dialog .VContentBottom.BackgroundToolbar 
+{
+	top: calc(70% - 50px);
+	right: 20px;
+}
+
+html body[mobile] .Dialog .VContentBottom.BackgroundToolbar button
+{
+	background: transparent;
+	border: 0;
+	color: white;
+}
+
+html body[mobile] .Dialog > .ScrollArea
+{
+	font-size: 120%;
+	padding: 20px;
+	height: 40%;
+	top: 30%;
+	background: rgba(0,0,0,0.85);
+	border-radius: 5px;
+	left: 10px;
+	right: 10px;
+	box-shadow: 0px 2px 5px rgba(0,0,0,0.7);
 }
 
 .Padding
@@ -1571,9 +1628,11 @@ html #Tray
 	bottom: 6px;
 }
 
-html #Tray > div
+html div #Tray > div
 {
-	margin: -2px 10px 10px 0;
+	margin: -2px 0px 10px 0;
+	color: #455155;
+	text-shadow: none;
 }
 
 html #WorkspaceMenu
@@ -2559,6 +2618,23 @@ html .File.Selected .Title
 	max-height: 200px !important;
 }
 
+html body[mobile] .File.Selected .Title
+{
+	height: fit-content;
+	color: black;
+}
+
+html body div .File.Selected:before
+{
+	background-color: rgba(220,220,220,1);
+}
+
+html .File.Selected .Title, 
+html #Screens .Content:not([listmode=compact]) .File.Selected .Title
+{
+	background-color: transparent;
+}
+
 
 @media (max-width: 320px)
 {
@@ -2718,6 +2794,34 @@ html .File .Icon > .TypeBZ
 html .File a
 {
 	color: #212729;
+}
+
+html body .File.Selected:before
+{
+	background: rgba(185,185,185,0.2);
+	border-radius: 2px;
+	content: " ";
+	display: block;
+	width: 120%;
+	position: absolute;
+	top: 0;
+	left: -10%;
+	height: 100%;
+}
+
+html body .View .Content[listmode=imageview] .File.Selected:before
+{
+    width: 90%;
+    top: 7%;
+    left: 5%;
+    height: 90%;
+}
+
+html body .ScreenContent > .Scroller > div > .File.Selected:before,
+html body #MousePointer .File.Selected:before,
+html .View .Content[listmode=compact] .File.Selected:before
+{
+	display: none;
 }
 
 html .File .Icon *
@@ -3484,6 +3588,7 @@ input[type=datetime-local], input[type=password], html body textarea, html selec
 	border-radius: 2px;
 	border: 1px solid #e3e7e8;
 	background: #e8e8e8;
+	font-size: 0.9em;
 }
 
 html select, html select:hover
@@ -3494,6 +3599,12 @@ html select, html select:hover
 	background: #e3e7e8;
 	vertical-align: top;
 	padding: 4px 2px !important;
+	font-size: 0.9em;
+}
+
+html button:before, html button.IconSmall:before
+{
+	font-size: 1.1em;
 }
 
 /* Mouse pointers ----------------------------------------------------------- */
@@ -3538,8 +3649,9 @@ html .MouseMove,
 html .TitleBar:hover .Left:after,
 html .TitleBar:active .Left:after,
 html .View > .Title:active, html .View:active > .Title,
-html .View:active, html .View[moving=moving], html .View[moving=moving] *,
-html .View > .MoveOverlay, html .Screen > .MoveOverlay
+html .View[moving=moving], html .View[moving=moving] *,
+html .View > .MoveOverlay, html .Screen > .MoveOverlay,
+html .Screen > .ScreenOverlay
 {
 	cursor: move;
 }
@@ -3565,87 +3677,8 @@ html .MouseDefault
 html body.Busy, html body.Busy *
 {
 	cursor: progress;
-	/*animation: busyPointer 1000ms infinite;
-	-webkit-animation: busyPointer 1000ms infinite;*/
 }
-@keyframes busyPointer
-{
-	0%     { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0001.png) 0 0, auto; }
-	2.85%  { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0002.png) 0 0, auto; }
-	5.70%  { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0003.png) 0 0, auto; }
-	8.55%  { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0004.png) 0 0, auto; }
-	11.40% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0005.png) 0 0, auto; }
-	14.25% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0006.png) 0 0, auto; }
-	17.10% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0007.png) 0 0, auto; }
-	19.95% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0008.png) 0 0, auto; }
-	22.80% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0009.png) 0 0, auto; }
-	25.65% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0010.png) 0 0, auto; }
-	28.50% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0011.png) 0 0, auto; }
-	31.35% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0012.png) 0 0, auto; }
-	34.20% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0013.png) 0 0, auto; }
-	37.05% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0014.png) 0 0, auto; }
-	39.90% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0015.png) 0 0, auto; }
-	42.75% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0016.png) 0 0, auto; }
-	45.60% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0017.png) 0 0, auto; }
-	48.45% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0018.png) 0 0, auto; }
-	51.30% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0019.png) 0 0, auto; }
-	54.15% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0020.png) 0 0, auto; }
-	57.00% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0021.png) 0 0, auto; }
-	59.85% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0022.png) 0 0, auto; }
-	62.70% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0023.png) 0 0, auto; }
-	65.55% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0024.png) 0 0, auto; }
-	68.40% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0025.png) 0 0, auto; }
-	71.25% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0026.png) 0 0, auto; }
-	74.10% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0027.png) 0 0, auto; }
-	76.95% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0028.png) 0 0, auto; }
-	79.80% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0029.png) 0 0, auto; }
-	82.65% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0030.png) 0 0, auto; }
-	85.50% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0031.png) 0 0, auto; }
-	88.35% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0032.png) 0 0, auto; }
-	91.20% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0033.png) 0 0, auto; }
-	94.05% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0034.png) 0 0, auto; }
-	96.90% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0035.png) 0 0, auto; }
-	100%   { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0035.png) 0 0, auto; }
-}
-@-webkit-keyframes busyPointer
-{
-	0%     { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0001.png) 0 0, auto; }
-	2.85%  { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0002.png) 0 0, auto; }
-	5.70%  { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0003.png) 0 0, auto; }
-	8.55%  { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0004.png) 0 0, auto; }
-	11.40% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0005.png) 0 0, auto; }
-	14.25% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0006.png) 0 0, auto; }
-	17.10% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0007.png) 0 0, auto; }
-	19.95% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0008.png) 0 0, auto; }
-	22.80% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0009.png) 0 0, auto; }
-	25.65% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0010.png) 0 0, auto; }
-	28.50% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0011.png) 0 0, auto; }
-	31.35% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0012.png) 0 0, auto; }
-	34.20% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0013.png) 0 0, auto; }
-	37.05% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0014.png) 0 0, auto; }
-	39.90% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0015.png) 0 0, auto; }
-	42.75% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0016.png) 0 0, auto; }
-	45.60% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0017.png) 0 0, auto; }
-	48.45% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0018.png) 0 0, auto; }
-	51.30% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0019.png) 0 0, auto; }
-	54.15% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0020.png) 0 0, auto; }
-	57.00% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0021.png) 0 0, auto; }
-	59.85% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0022.png) 0 0, auto; }
-	62.70% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0023.png) 0 0, auto; }
-	65.55% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0024.png) 0 0, auto; }
-	68.40% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0025.png) 0 0, auto; }
-	71.25% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0026.png) 0 0, auto; }
-	74.10% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0027.png) 0 0, auto; }
-	76.95% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0028.png) 0 0, auto; }
-	79.80% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0029.png) 0 0, auto; }
-	82.65% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0030.png) 0 0, auto; }
-	85.50% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0031.png) 0 0, auto; }
-	88.35% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0032.png) 0 0, auto; }
-	91.20% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0033.png) 0 0, auto; }
-	94.05% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0034.png) 0 0, auto; }
-	96.90% { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0035.png) 0 0, auto; }
-	100%   { cursor: url(/themes/friendup12/gfx/icons/Custom/busyanim/busy0035.png) 0 0, auto; }
-}
+
 
 /* Deepest field */
 

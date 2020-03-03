@@ -259,11 +259,12 @@ Door.prototype.getIcons = function( fileInfo, callback, flags )
 			
 			// Use standard Friend Core doors
 			var j = new cAjax();
+			if( t.cancelId )
+				j.cancelId = t.cancelId;
 			if( t.context ) j.context = t.context;
 
 			//changed from post to get to get more speed.
-			j.forceHTTP = true;
-			j.open( 'get', updateurl, true, true );
+			j.open( 'POST', updateurl, true, true );
 			j.parseQueue = function( result, path, purePath )
 			{
 				if( cache[ updateurl ].queue.length )
@@ -493,6 +494,8 @@ Door.prototype.write = function( filename, data, mode, extraData )
 	
 	var j = new cAjax();
 	if( this.context ) j.context = this.context;
+	if( this.cancelId )
+		jax.cancelId = this.cancelId;
 	
 	//var old = Workspace.websocketsOffline;
 	//Workspace.websocketsOffline = true;
@@ -553,6 +556,8 @@ Door.prototype.read = function( filename, mode, extraData )
 	}
 	var j = new cAjax();
 	if( this.context ) j.context = this.context;
+	if( this.cancelId )
+		j.cancelId = this.cancelId;
 	if( mode == 'rb' )
 		j.forceHTTP = true;
 	j.open( 'post', '/system.library/file/read', true, true );
@@ -645,6 +650,8 @@ Door.prototype.dosAction = function( ofunc, args, callback )
 				{
 					// Loads the file in binary mode
 					var file = new File( args[ 'from' ] );
+					if( this.cancelId )
+						file.cancelId = this.cancelId;
 					file.onLoad = function( data )
 					{
 						door.Dormant.write( args[ 'to' ], data, function( response )
@@ -687,13 +694,18 @@ Door.prototype.dosAction = function( ofunc, args, callback )
 	// We need a path
 	if( !args.path ) args.path = this.deviceName + ':' + this.path;
 
+	//console.log( '[ Door File Operation ] ' + ofunc + ' - ' + this.deviceName + ':' + this.path );
+
 	// Do the request
 	var j = new cAjax();
+	if( this.cancelId )
+		j.cancelId = this.cancelId;
 	if( this.context ) j.context = this.context;
 	j.open( 'post', '/system.library/' + func, true, true );
 	if( Workspace.conf && Workspace.conf.authId )
 		j.addVar( 'authid', Workspace.conf.authId );
 	else j.addVar( 'sessionid', Workspace.sessionId );
+	if( typeof( this.notify ) != 'undefined' ) j.addVar( 'notify', this.notify );
 	j.addVar( 'args', JSON.stringify( args ) );
 	// Since FC doesn't have full JSON support yet, let's do this too
 	if( args && ( typeof( args ) == 'object' || typeof( args ) == 'array' ) )
@@ -713,6 +725,7 @@ Door.prototype.dosAction = function( ofunc, args, callback )
 		{
 			refresh();
 			var s = this.responseText().split( '<!--separate-->' );
+			
 			if( s && s[0] != 'ok' )
 			{
 				doAlert();
@@ -770,6 +783,8 @@ Door.prototype.dosAction = function( ofunc, args, callback )
 Door.prototype.Mount = function( callback )
 {
 	var f = new FriendLibrary( 'system.library' );
+	if( this.cancelId )
+		f.cancelId = this.cancelId;
 	f.onExecuted = function( e, d )
 	{
 		Application.refreshDoors();
@@ -790,6 +805,8 @@ Door.prototype.Mount = function( callback )
 Door.prototype.Unmount = function( callback )
 {
 	var f = new Library( 'system.library' );
+	if( this.cancelId )
+		f.cancelId = this.cancelId;
 	f.onExecuted = function( e, d )
 	{
 		//
@@ -897,6 +914,8 @@ function GetURLFromPath( path, callback, type, toAdd )
 
 		// Load the file in binary
 		var file = new File( path );
+		if( this.cancelId )
+			file.cancelId = this.cancelId;
 		file.onLoad = function( data )
 		{
 			// Check for error

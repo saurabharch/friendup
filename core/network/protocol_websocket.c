@@ -31,9 +31,10 @@ extern SystemBase *SLIB;
 #define USE_WORKERS 1
 //#define USE_WORKERS_PING
 #define USE_PTHREAD_PING 1
+#define INPUT_QUEUE
 
 // enabled for development/IDE
-#define ENABLE_WEBSOCKETS_THREADS 1
+//#define ENABLE_WEBSOCKETS_THREADS 1
 //#define USE_PTHREAD 1
 
 //pthread_mutex_t WSThreadMutex;
@@ -165,6 +166,7 @@ int WebsocketWriteInline( WSCData *wscdata, unsigned char *msgptr, int msglen, i
 				if( wscdata->wsc_Wsi != NULL )
 				{
 					lws_callback_on_writable( wscdata->wsc_Wsi );
+					lws_cancel_service_pt( wscdata->wsc_Wsi );
 				}
 				FRIEND_MUTEX_UNLOCK( &(wscdata->wsc_Mutex) );
 			}
@@ -204,6 +206,7 @@ int WebsocketWriteInline( WSCData *wscdata, unsigned char *msgptr, int msglen, i
 			if( wscdata->wsc_Wsi != NULL )
 			{
 				lws_callback_on_writable( wscdata->wsc_Wsi );
+				lws_cancel_service_pt( wscdata->wsc_Wsi );
 			}
 			FRIEND_MUTEX_UNLOCK( &(wscdata->wsc_Mutex) );
 		}
@@ -227,7 +230,18 @@ int WebsocketWriteInline( WSCData *wscdata, unsigned char *msgptr, int msglen, i
 int WebsocketWrite( UserSessionWebsocket *wsi, unsigned char *msgptr, int msglen, int type )
 {
 	int retval = 0;
-	if( wsi->wusc_Data == NULL || wsi->wusc_Data->wsc_Wsi == NULL )
+	/*
+	#5  0x00005580b006eae1 in addr2line (program_name=0x7ffe00631eeb "/home/friend/friendup/build/FriendCore", addr=0x5580b006e912 <crash_handler+240>, target_stream=0x7f2acc0bcd60)
+    at main.c:270
+#6  0x00005580b006e993 in crash_handler (sig=11) at main.c:227
+#7  <signal handler called>
+#8  0x00005580b008b2ad in WebsocketWrite (wsi=0x0, 
+    msgptr=0x7f2acc0cd7e0 "{\"type\":\"msg\",\"data\":{\"type\":\"response\",\"requestid\":\"fconn-req-0j1tp7nh-38o7rtzu-nzlw23eh\",\"data\":\"ok\"}}", msglen=104, type=0)
+    at network/protocol_websocket.c:233
+#9  0x00005580b008c437 in WSThread (d=0x7f2acc0bad20) at network/protocol_websocket.c:616
+
+	 */
+	if( wsi == NULL || wsi->wusc_Data == NULL || wsi->wusc_Data->wsc_Wsi == NULL )
 	{
 		return 0;
 	}
@@ -316,9 +330,10 @@ int WebsocketWrite( UserSessionWebsocket *wsi, unsigned char *msgptr, int msglen
 					{
 						if( FRIEND_MUTEX_LOCK( &(wsi->wusc_Data->wsc_Mutex) ) == 0 )
 						{
-							if( wsi->wusc_Data != NULL && wsi->wusc_Data->wsc_Wsi != NULL && wsi->wusc_Data->wsc_Wsi != NULL )
+							if( wsi->wusc_Data != NULL && wsi->wusc_Data->wsc_Wsi != NULL )
 							{
 								lws_callback_on_writable( wsi->wusc_Data->wsc_Wsi );
+								lws_cancel_service_pt( wsi->wusc_Data->wsc_Wsi );
 							}
 							FRIEND_MUTEX_UNLOCK( &(wsi->wusc_Data->wsc_Mutex) );
 						}
@@ -368,9 +383,10 @@ int WebsocketWrite( UserSessionWebsocket *wsi, unsigned char *msgptr, int msglen
 				{
 					if( FRIEND_MUTEX_LOCK( &(wsi->wusc_Data->wsc_Mutex) ) == 0 )
 					{
-						if( wsi->wusc_Data != NULL && wsi->wusc_Data->wsc_Wsi != NULL && wsi->wusc_Data->wsc_Wsi != NULL )
+						if( wsi->wusc_Data != NULL && wsi->wusc_Data->wsc_Wsi != NULL )
 						{
 							lws_callback_on_writable( wsi->wusc_Data->wsc_Wsi );
+							lws_cancel_service_pt( wsi->wusc_Data->wsc_Wsi );
 						}
 						FRIEND_MUTEX_UNLOCK( &(wsi->wusc_Data->wsc_Mutex) );
 					}
@@ -428,6 +444,7 @@ void WSThread( void *d )
 	int error = 0;
 	BufString *queryrawbs = data->queryrawbs;
 	WSCData *fcd = data->fcd;
+
 	if( fcd->wsc_Wsi == NULL )
 	{
 		releaseWSData( data );
@@ -443,12 +460,15 @@ void WSThread( void *d )
 	
 	if( fcd->wsc_Wsi == NULL || fcd->wsc_UserSession == NULL )
 	{
-		FERROR("Error session is NULL\n");
-		releaseWSData( data );
+		FERROR("Error session is NULL : wsi: %p usersession: %p\n", fcd->wsc_Wsi, fcd->wsc_UserSession );
 
 		FRIEND_MUTEX_LOCK( &(fcd->wsc_Mutex) );
 		fcd->wsc_InUseCounter--;
 		FRIEND_MUTEX_UNLOCK( &(fcd->wsc_Mutex) );
+		
+		releaseWSData( data );
+		
+		 //lws_close_reason( fcd->wsc_Wsi, LWS_CLOSE_STATUS_GOINGAWAY , NULL, 0 );
 		
 #ifdef USE_PTHREAD
 		pthread_exit( 0 );
@@ -478,7 +498,6 @@ void WSThread( void *d )
 		if( respcode == -666 )
 		{
 			INFO("Logout function called.");
-			releaseWSData( data );
 			
 			HttpFree( response );
 			
@@ -487,6 +506,8 @@ void WSThread( void *d )
 			FRIEND_MUTEX_LOCK( &(fcd->wsc_Mutex) );
 			fcd->wsc_InUseCounter--;
 			FRIEND_MUTEX_UNLOCK( &(fcd->wsc_Mutex) );
+			
+			releaseWSData( data );
 
 #ifdef USE_PTHREAD
 			pthread_exit(0);
@@ -512,7 +533,14 @@ void WSThread( void *d )
 		}
 		else
 		{
-			Log( FLOG_INFO, "[WS] C. SysWebRequest took %f seconds, err: %d response: '%s'\n" , secs, response->errorCode, response->content );
+			//if( response != NULL )
+			//{
+				//Log( FLOG_INFO, "[WS] C. SysWebRequest took %f seconds, err: %d response: '%s'\n" , secs, response->errorCode, response->content );
+			//}
+			//else
+			{
+				Log( FLOG_INFO, "[WS] C. SysWebRequest took %f seconds\n" , secs );
+			}
 		}
 		
 		if( response != NULL )
@@ -699,11 +727,11 @@ void WSThread( void *d )
 		Log( FLOG_INFO, "WS no response end LOCKTEST\n");
 	}
 	
-	releaseWSData( data );
-	
 	FRIEND_MUTEX_LOCK( &(fcd->wsc_Mutex) );
 	fcd->wsc_InUseCounter--;
 	FRIEND_MUTEX_UNLOCK( &(fcd->wsc_Mutex) );
+	
+	releaseWSData( data );
 	
 	Log( FLOG_INFO, "WS END mutexes unlocked\n");
 	
@@ -802,7 +830,21 @@ static inline int jsoneqin(const char *json, const jsmntok_t *tok, const char *s
 			} \
 		}
 
+#ifdef INPUT_QUEUE
+
+typedef struct InputMsg
+{
+	WSCData		*im_FCD;
+	char		*im_Msg;
+	size_t		im_Len;
+	pthread_t	im_Thread;
+}InputMsg;
+
+void ParseAndCallThread( void *d );
 int ParseAndCall( WSCData *fcd, char *in, size_t len );
+#else
+int ParseAndCall( WSCData *fcd, char *in, size_t len );
+#endif
 
 /**
  * Main FriendCore websocket callback
@@ -888,8 +930,10 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 					Log( FLOG_DEBUG, "PROTOCOL_WS: Check in use %d wsiptr %p fcws ptr %p\n", fcd->wsc_InUseCounter, wsi, fcd );
 					if( fcd->wsc_InUseCounter <= 0 )
 					{
+						Log( FLOG_INFO, "Closeing WS connection properly\n");
 						break;
 					}
+					/*
 					if( val++ > 15 )
 					{
 						int i;
@@ -900,6 +944,7 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 						Log( FLOG_INFO, "Closeing WS connection\n");
 						break;
 					}
+					*/
 					sleep( 1 );
 					pthread_yield();
 				}
@@ -912,6 +957,8 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 				
 				FQDeInitFree( &(fcd->wsc_MsgQueue) );
 				pthread_mutex_destroy( &(fcd->wsc_Mutex) );
+				
+				lws_close_reason( wsi, LWS_CLOSE_STATUS_GOINGAWAY , NULL, 0 );
 			}
 			Log( FLOG_DEBUG, "[WS] Callback session closed\n");
 
@@ -993,17 +1040,39 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 				*/
 				DEBUG1("[WS] Callback receive: %s\n", in );
 				
+#ifdef INPUT_QUEUE
+				InputMsg *imsg = FCalloc( 1, sizeof( InputMsg ) );
+				if( imsg != NULL )
+				{
+					// threads
+					//pthread_t thread;
+					memset( &(imsg->im_Thread), 0, sizeof( pthread_t ) );
+					
+					DEBUG("Pass fcd to thread: %p\n", fcd );
+					imsg->im_FCD = fcd;
+					imsg->im_Msg = in;
+					imsg->im_Len = len;
+
+					//WorkerManagerRun( SLIB->sl_WorkerManager, ParseAndCallThread, imsg, NULL, "ProtocolWebsocket.c: line 1030" );
+					// Multithread mode
+					if( pthread_create( &(imsg->im_Thread), NULL,  (void *(*)(void *))ParseAndCallThread, ( void *)imsg ) != 0 )
+					{
+					}
+				}
+#else
 				ParseAndCall( fcd, in, len );
+#endif
 				
 				DEBUG("Webcall finished!\n");
 			}
 			
+#ifndef INPUT_QUEUE
 			if( len > 0 )
 			{
 				char *c = (char *)in;
 				c[ 0 ] = 0;
 			}
-			
+#endif
 		break;
 		
 		case LWS_CALLBACK_SERVER_WRITEABLE:
@@ -1034,6 +1103,10 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 					t[ e->fq_Size+1 ] = 0;
 
 					lws_write( wsi, e->fq_Data+LWS_SEND_BUFFER_PRE_PADDING, e->fq_Size, LWS_WRITE_TEXT );
+					
+#ifdef __PERF_MEAS
+					Log( FLOG_INFO, "PERFCHECK: Websocket message sent time: %f\n", ((GetCurrentTimestampD()-e->fq_stime)) );
+#endif
 
 					int errret = lws_send_pipe_choked( wsi );
 				
@@ -1050,6 +1123,7 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 					FRIEND_MUTEX_UNLOCK( &(fcd->wsc_Mutex) );
 					//break;
 				}
+				sleep( 0 );
 			//}
 			DEBUG("WS Writable END, wsi ptr %p fcwsptr %p\n", wsi, fcd );
 			
@@ -1110,10 +1184,12 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 	
 	DECREASE_WS_THREADS();
 	
+#ifndef INPUT_QUEUE	// do not deallocate memory if command is going to thread
 	if( in != NULL )
 	{
 		FFree( in );
 	}
+#endif
 
 	return returnError;
 }
@@ -1121,6 +1197,39 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 //
 //
 //
+#ifdef INPUT_QUEUE
+void ParseAndCallThread( void *d )
+{
+	pthread_detach( pthread_self() );
+	InputMsg *im = (InputMsg *)d;
+	
+	if( FRIEND_MUTEX_LOCK( &(im->im_FCD->wsc_Mutex) ) == 0 )
+	{
+		im->im_FCD->wsc_InUseCounter++;
+		FRIEND_MUTEX_UNLOCK( &(im->im_FCD->wsc_Mutex) );
+	}
+	
+	DEBUG("[ParseAndCallThread] FCD %p\n", im->im_FCD );
+	ParseAndCall( im->im_FCD, im->im_Msg, im->im_Len );
+	
+	if( FRIEND_MUTEX_LOCK( &(im->im_FCD->wsc_Mutex) ) == 0 )
+	{
+		im->im_FCD->wsc_InUseCounter--;
+		FRIEND_MUTEX_UNLOCK( &(im->im_FCD->wsc_Mutex) );
+	}
+	
+	if( im != NULL )
+	{
+		if( im->im_Msg != NULL )
+		{
+			FFree( im->im_Msg );
+		}
+		FFree( im );
+	}
+	// do not use with worker!!!
+	pthread_exit( 0 );
+}
+#endif
 
 int ParseAndCall( WSCData *fcd, char *in, size_t len )
 {
@@ -1269,6 +1378,9 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 											DEBUG( "No message!\n" );
 										}
 										
+#ifdef INPUT_QUEUE
+										wsreq->wr_Message = NULL; // memory was released by ParseAndCall
+#endif
 										WebsocketReqDelete( wsreq );
 									}
 								}
@@ -1622,7 +1734,7 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 										}
 									} // end of going through json
 									
-
+#ifndef INPUT_QUEUE
 #if (ENABLE_WEBSOCKETS_THREADS == 1) || ( USE_PTHREAD == 1 )
 									// threads
 									pthread_t thread;
@@ -1657,12 +1769,13 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 									{
 										releaseWSData( wstdata );
 									}
-#endif
+#endif	// USE_WORKERS
 
 
-#else
+#endif // (ENABLE_WEBSOCKETS_THREADS == 1) || ( USE_PTHREAD == 1 )
+#else // INPUT_QUEUE
 									wstdata->http = http;
-									wstdata->wsi = wsi;
+									//wstdata->wsi = wsi;
 									wstdata->fcd = fcd;
 									wstdata->queryrawbs = queryrawbs;
 									WSThread( wstdata );
@@ -1940,5 +2053,6 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 	}
 	
 	FFree( t );
+	
 	return 0;
 }

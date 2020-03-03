@@ -22,23 +22,96 @@ Filedialog = function( object, triggerfunction, path, type, filename, title )
 	var ignoreFiles = false;
 	var rememberPath = false;
 	
-	if( path && ( path.toLowerCase() == 'Mountlist:' || path.indexOf( ':' ) < 0 ) )
+	// Sanitize paths
+	var lastChar;
+	if( path )
+	{
+		lastChar = path.substr( -1, 1 );
+		if( lastChar != ':' && lastChar != '/' )
+		{
+			if( path.indexOf( '/' ) > 0 )
+			{
+				path = path.split( '/' );
+				object.filename = path.pop();
+				path = path.join( '/' ) + '/';
+				path = path.replace( '//', '/' );
+			}
+			else if( path.indexOf( ':' ) > 0 )
+			{
+				path = path.split( ':' );
+				object.filename = path.pop();
+				path = path.join( ':' ) + ':';
+				path = path.replace( '::', ':' );
+			}
+		}
+	}
+	if( object.path )
+	{
+		lastChar = object.path.substr( -1, 1 );
+		if( lastChar != ':' && lastChar != '/' )
+		{
+			if( object.path.indexOf( '/' ) > 0 )
+			{
+				object.path = object.path.split( '/' );
+				object.filename = object.path.pop();
+				object.path = object.path.join( '/' ) + '/';
+				object.path = object.path.replace( '//', '/' );
+			}
+			else if( object.path.indexOf( ':' ) > 0 )
+			{
+				object.path = object.path.split( ':' );
+				object.filename = object.path.pop();
+				object.path = object.path.join( ':' ) + ':';
+				object.path = object.path.replace( '::', ':' );
+			}
+		}
+	}
+	// End path sanitation
+	
+	
+	if( path && ( ( !window.isMobile && path.toLowerCase() == 'mountlist:' ) || path.indexOf( ':' ) < 0 ) )
 	{
 		path = defaultPath;
 	}
 	if( !path || typeof( path ) == 'undefined' ) path = defaultPath;
 	
-	FriendDOS.getFileInfo( path, function( e, d )
+	if( object.path )
 	{
-		if( e == true )
+		path = object.path;
+	}
+	
+	// Only mobile can access mountlist
+	if( !window.isMobile && path == 'Mountlist:' )
+		path = 'Home:';
+	
+	if( !window.isMobile && object && object.path && object.path == 'Mountlist:' )
+		object.path = false;
+	
+	
+	// Check if the path exists
+	if( path != 'Mountlist:' )
+	{
+		FriendDOS.getFileInfo( path, function( e, d )
 		{
-			init();
-		}
-		else
-		{
-			Alert( i18n( 'i18n_illegal_path' ), i18n( 'i18n_illegal_path_desc' ) );
-		}
-	} );
+			if( e == true )
+			{
+				init();
+			}
+			else
+			{
+				Alert( i18n( 'i18n_illegal_path' ), i18n( 'i18n_illegal_path_desc' ) + ':<br/><p class="Margins">' + path + '</p>', false, function()
+				{
+					path = 'Home:';
+					object.path = 'Home:';
+					init();
+				} );
+			}
+		} );
+	}
+	else
+	{
+		init();
+	}
 	
 	function init()
 	{
@@ -85,7 +158,7 @@ Filedialog = function( object, triggerfunction, path, type, filename, title )
 						keyboardNavigation = object[a];
 						break;
 					case 'rememberPath':
-						rememberPath = object[a] ? true : false
+						rememberPath = object[a] ? true : false;
 						break;
 				}
 			}
@@ -179,7 +252,7 @@ Filedialog = function( object, triggerfunction, path, type, filename, title )
 
 
 		// Do the remembering
-		if( rememberPath && ds && ds.path )
+		if( rememberPath && ds && ds.path && !object.path )
 		{
 			self.path = path = ds.path;
 		}
@@ -281,12 +354,19 @@ Filedialog = function( object, triggerfunction, path, type, filename, title )
 					// Check if the suffix matches
 					if( !dialog.checkSuffix( p ) )
 					{
+						var filename = '';
+						if( p.indexOf( '/' ) > 0 )
+							filename = ( p.split( '/' ) ).pop();
+						else if( p.indexOf( ':' ) > 0 )
+							filename = ( p.split( ':' ) ).pop();
+						else filename = p;
+							
 						var suf = typeof( w.dialog.suffix ) == 'string' ? w.dialog.suffix : w.dialog.suffix[0];
 						var fix = w.dialog.saveinput.value.split( '.' );
 						fix.pop();
 						fix.push( suf );
 						fix = fix.join( '.' );
-						w.dialog.saveinput.value = fix;
+						w.dialog.saveinput.value = filename + '.' + fix;
 						w.dialog.saveinput.focus();
 						w.dialog.saveinput.select();
 						return;
@@ -418,7 +498,7 @@ Filedialog = function( object, triggerfunction, path, type, filename, title )
 		// Refresh dir listing
 		w.refreshView = function()
 		{
-			if( rememberPath )
+			if( rememberPath && !object.path )
 			{
 				ds.path = dialog.path;
 			}
@@ -555,12 +635,13 @@ Filedialog = function( object, triggerfunction, path, type, filename, title )
 									// Check if the suffix matches
 									if( !dialog.checkSuffix( this.value ) )
 									{
+										val = this.value;
 										var suf = typeof( dialog.suffix ) == 'string' ? dialog.suffix : dialog.suffix[0];
 										var fix = dialog.saveinput.value.split( '.' );
 										fix.pop();
 										fix.push( suf );
 										fix = fix.join( '.' );
-										this.value = fix;
+										this.value = val + '.' + fix;
 										this.focus();
 										this.select();
 										return;
@@ -648,7 +729,7 @@ Filedialog = function( object, triggerfunction, path, type, filename, title )
 				inpu.value = dialog.path;
 			}
 		
-			if( dialog.path == 'Mountlist:' )
+			if( !window.isMobile && dialog.path == 'Mountlist:' )
 			{
 				// Correct fileinfo
 				w._window.fileInfo = {
