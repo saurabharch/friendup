@@ -84,7 +84,6 @@ void HttpClientDelete( HttpClient *c )
 {
 	if( c != NULL )
 	{
-		int i;
 		/*
 		for( i=0 ; i < HTTP_HEADER_END ; i++ )
 		{
@@ -128,7 +127,7 @@ BufString *HttpClientCall( HttpClient *c, char *host, int port, FBOOL secured )
 {
 	struct hostent *server;
 	struct sockaddr_in serv_addr;
-	int sockfd = 0, bytes, sent, received = 0, total;
+	int sockfd = 0, bytes, received = 0, total;
 	
 	BIO              *certbio = NULL;
 	BIO               *outbio = NULL;

@@ -133,7 +133,6 @@ void NotificationAndroidSendingThread( FThread *data )
 
 int NotificationManagerNotificationSendAndroid( NotificationManager *nm, Notification *notif, FULONG ID, char *action, char *tokens )
 {
-	SystemBase *sb = (SystemBase *)nm->nm_SB;
 	char *host = FIREBASE_HOST;
 	
 	char tmp[ 256 ];
@@ -206,10 +205,6 @@ int NotificationManagerNotificationSendAndroid( NotificationManager *nm, Notific
 
 int NotificationManagerNotificationSendAndroidQueue( NotificationManager *nm, Notification *notif, FULONG ID, char *action, char *tokens )
 {
-	SystemBase *sb = (SystemBase *)nm->nm_SB;
-	char *host = FIREBASE_HOST;
-	
-	
 	int msgSize = 512;
 	
 	if( tokens != NULL ){ msgSize += strlen( tokens ); }

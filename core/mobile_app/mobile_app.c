@@ -363,8 +363,7 @@ int MobileAppAddNewUserConnection( MobileAppConnection *con, const char *usernam
 int WebsocketAppCallback(struct lws *wsi, int reason, void *user __attribute__((unused)), void *in, size_t len )
 {
 	//DEBUG("websocket callback, reason %d, len %zu, wsi %p\n", reason, len, wsi);
-	MobileAppNotif *man = (MobileAppNotif *) user;
-	
+
 	if( reason == LWS_CALLBACK_PROTOCOL_INIT )
 	{
 		MobileAppInit();
@@ -723,7 +722,7 @@ int WebsocketAppCallback(struct lws *wsi, int reason, void *user __attribute__((
 						
 						case 'g': //get old notification
 							{
-								char *get = json_get_element_string( &json, "get" );
+								//char *get = json_get_element_string( &json, "get" );
 								
 								FULONG umaID = appConnection->mac_UserMobileAppID;
 								if( umaID > 0 )
@@ -978,7 +977,7 @@ static int MobileAppHandleLogin( struct lws *wsi, void *userdata, json_t *json )
 		
 		con->mac_UserSession = USMGetSessionBySessionID( SLIB->sl_USM, sessionid );
 		
-		int err = MobileAppAddNewUserConnection( con, usernameString, userdata );
+		MobileAppAddNewUserConnection( con, usernameString, userdata );
 		
 		Log( FLOG_DEBUG, "\t\t\tADD APP CONNECTION Websocket pointer: %p login return error: %p position %d pointer to UserSession %p\n", wsi, con, con->mac_UserConnectionIndex, con->mac_UserSession );
 		
@@ -1073,8 +1072,6 @@ int MobileAppNotifyUserRegister( void *lsb, const char *username, const char *ch
 {
 #endif
 	SystemBase *sb = (SystemBase *)lsb;
-	UserMobileAppConnections *userConnections = NULL;
-	MobileManager *mm = sb->sl_MobileManager;
 	Notification *notif = NULL;
 	FBOOL wsMessageSent = FALSE;
 	
@@ -1208,7 +1205,7 @@ int MobileAppNotifyUserRegister( void *lsb, const char *username, const char *ch
 		NotificationManagerAddToList( sb->sl_NotificationManager, notif );
 	}
 	
-	DEBUG("NotificationRegister: get all connections by name: %s pointer: %p\n", username, userConnections );
+	DEBUG("NotificationRegister: get all connections by name: %s\n", username );
 	
 	BufString *bsMobileReceivedMessage = BufStringNew();
 	

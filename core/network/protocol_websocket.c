@@ -199,7 +199,7 @@ int WebsocketWriteInline( WSCData *wscdata, unsigned char *msgptr, int msglen, i
 			
 			DEBUG("Send message to WSI, ptr: %p\n", wscdata->wsc_Wsi );
 
-			struct lws *wsi = wscdata->wsc_Wsi;
+			//struct lws *wsi = wscdata->wsc_Wsi;
 			
 			DEBUG("In use counter %d\n", wscdata->wsc_InUseCounter );
 			
@@ -452,7 +452,7 @@ void WSThread( void *d )
 	}
 	
 	UserSessionWebsocket *wscl = fcd->wsc_WebsocketsServerClient;
-	struct lws *wsi = fcd->wsc_Wsi;
+	//struct lws *wsi = fcd->wsc_Wsi;
 	
 	FRIEND_MUTEX_LOCK( &(fcd->wsc_Mutex) );
 	fcd->wsc_InUseCounter++;
@@ -758,7 +758,6 @@ void WSThreadPing( void *p )
 	
 	INCREASE_WS_THREADS();
 	
-	int n = 0;
 	WSCData *fcd = data->fcd;
 	
 	unsigned char *answer = FCalloc( 1024, sizeof(char) );
@@ -779,7 +778,7 @@ void WSThreadPing( void *p )
 		fcd->wsc_InUseCounter++;
 		FRIEND_MUTEX_UNLOCK( &(fcd->wsc_Mutex) );
 	
-		struct lws *wsi = fcd->wsc_Wsi;
+		//struct lws *wsi = fcd->wsc_Wsi;
 	
 		UserSession *ses = fcd->wsc_UserSession;
 		if( ses != NULL )
@@ -924,7 +923,6 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 					FRIEND_MUTEX_UNLOCK( &(fcd->wsc_Mutex) );
 				}
 				
-				int val = 0;
 				while( TRUE )
 				{
 					Log( FLOG_DEBUG, "PROTOCOL_WS: Check in use %d wsiptr %p fcws ptr %p\n", fcd->wsc_InUseCounter, wsi, fcd );
@@ -1108,7 +1106,7 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 					Log( FLOG_INFO, "PERFCHECK: Websocket message sent time: %f\n", ((GetCurrentTimestampD()-e->fq_stime)) );
 #endif
 
-					int errret = lws_send_pipe_choked( wsi );
+					lws_send_pipe_choked( wsi );
 				
 					//DEBUG1("Sending message, size: %d PRE %d msg %s\n", e->fq_Size, LWS_SEND_BUFFER_PRE_PADDING, e->fq_Data+LWS_SEND_BUFFER_PRE_PADDING );
 					if( e != NULL )
@@ -1354,7 +1352,7 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 								char *idc = StringDuplicateN( in + t[ id ].start, (int)(t[ id ].end-t[ id ].start) );
 								part = StringNToInt( in + t[ part ].start, (int)(t[ part ].end-t[ part ].start) );
 								total = StringNToInt( in + t[ total ].start, (int)(t[ total ].end-t[ total ].start) );
-								UserSessionWebsocket *cl = (UserSessionWebsocket *)fcd->wsc_WebsocketsServerClient;
+								//UserSessionWebsocket *cl = (UserSessionWebsocket *)fcd->wsc_WebsocketsServerClient;
 								if( fcd->wsc_UserSession != NULL )
 								{
 									UserSession *ses = (UserSession *)fcd->wsc_UserSession;
@@ -1562,7 +1560,6 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 							{
 								DEBUG("Request received\n");
 								char *requestid = NULL;
-								int requestis = 0;
 								char *path = NULL;
 								int paths = 0;
 								char *authid = NULL;
@@ -1607,7 +1604,6 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 									//thread
 									char **pathParts = wstdata->pathParts;
 
-									int error = 0;
 									BufString *queryrawbs = BufStringNewSize( 2048 );
 									
 									DEBUG("[WS] Parsing messages\n");
@@ -1706,7 +1702,6 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 												
 												if( t[ i1 ].type == JSMN_ARRAY || t[ i1 ].type == JSMN_OBJECT )
 												{
-													int z=0;
 													if( t[ i1 ].type == JSMN_ARRAY )
 													{
 														i += t[ i1 ].size;
@@ -1904,7 +1899,6 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 													
 														if( t[ i1 ].type == JSMN_ARRAY || t[ i1 ].type == JSMN_OBJECT )
 														{
-															int z=0;
 															if( t[ i1 ].type == JSMN_ARRAY )
 															{
 																DEBUG("[WS] Next  entry is array %d\n", t[ i1 ].size );

@@ -418,24 +418,20 @@ int UGMAssignGroupToUser( UserGroupManager *smgr, User *usr )
 		FBOOL isAPI = FALSE;
 
 		char **row;
-		int j = 0;
-
+		
 		// remove user from group and then assign to new ones
 
 		UserRemoveFromGroups( usr );
 	
-		int rows = sqlLib->NumberOfRows( sqlLib, result );
+		//int rows = sqlLib->NumberOfRows( sqlLib, result );
 	
-		DEBUG("[UMAssignGroupToUser] Memory for %d  groups allocated\n", rows );
+		//DEBUG("[UMAssignGroupToUser] Memory for %d  groups allocated\n", rows );
 	
 		//if( usr->u_Groups != NULL )
 		{
-			int pos = 0;
-			//usr->u_GroupsNr = rows;
-		
 			while( ( row = sqlLib->FetchRow( sqlLib, result ) ) )
 			{
-				DEBUG("[UMAssignGroupToUser] Going through loaded rows %d -> %s\n", j, row[ 0 ] );
+				DEBUG("[UMAssignGroupToUser] Going through loaded -> %s\n", row[ 0 ] );
 				{
 					char *end;
 					FULONG gid = strtol( (char *)row[0], &end, 0 );

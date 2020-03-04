@@ -54,7 +54,6 @@ Http *AdminWebRequest( void *m, char **urlpath, Http **request, UserSession *log
 	SystemBase *l = (SystemBase *)m;
 	Http *response = NULL;
 	
-	char *path = NULL;
 	DEBUG("[AdminWebRequest] start\n");
 	
 	struct TagItem tags[] = {

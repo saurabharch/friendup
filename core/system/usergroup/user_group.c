@@ -37,8 +37,6 @@ UserGroup *UserGroupNew( FULONG id, char *name, FULONG uid, char *type )
 	
 	if( ( ug = FCalloc( 1, sizeof( UserGroup ) ) ) != NULL )
 	{
-		int len = strlen( name );
-		
 		ug->ug_ID = id;
 		ug->ug_Name = StringDuplicate(name);
 		ug->ug_UserID = uid;

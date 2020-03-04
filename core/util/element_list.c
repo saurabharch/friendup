@@ -24,7 +24,6 @@ IntListEl *ILEParseString( char *str )
 	{
 		return NULL;
 	}
-	int i;
 	char *startToken = str;
 	char *curToken = str+1;
 	
@@ -83,7 +82,7 @@ UIntListEl *UILEParseString( char *str )
 	{
 		return NULL;
 	}
-	int i;
+
 	char *startToken = str;
 	char *curToken = str+1;
 	
@@ -141,7 +140,6 @@ StringListEl *SLEParseString( char *str )
 	{
 		return NULL;
 	}
-	int i;
 	char *startToken = str;
 	char *curToken = str+1;
 	
@@ -151,7 +149,7 @@ StringListEl *SLEParseString( char *str )
 	{
 		if( *curToken == 0 || *curToken == ',' )
 		{
-			char *end;
+			//char *end;
 			
 			if( *curToken != 0 )
 			{
@@ -159,7 +157,7 @@ StringListEl *SLEParseString( char *str )
 			}
 			
 			curToken++;
-			int64_t var = strtol( startToken, &end, 0 );
+			//int64_t var = strtol( startToken, &end, 0 );
 			StringListEl *el = FCalloc( 1, sizeof( StringListEl ) );
 			if( el != NULL )
 			{

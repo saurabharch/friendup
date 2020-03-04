@@ -120,7 +120,7 @@ static inline int WorkerRunCommand( Worker *w, void (*foo)( void *), void *d )
 				pthread_cond_signal( &(w->w_Cond) );
 				FRIEND_MUTEX_UNLOCK( &(w->w_Mut) );
 			}
-			int wait = 0;
+			
 			/*
 			while( TRUE )
 			{
@@ -165,7 +165,6 @@ static int testquit = 0;
  */
 int WorkerManagerRun( WorkerManager *wm,  void (*foo)( void *), void *d, void *wrkinfo, char *path )
 {
-	int i = 0;
 	int max = 0;
 	Worker *wrk = NULL;
 	

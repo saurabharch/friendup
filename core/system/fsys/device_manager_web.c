@@ -269,7 +269,6 @@ Http *DeviceMWebRequest( void *m, char **urlpath, Http* request, UserSession *lo
 				if( res != NULL )
 				{
 					char **row;
-					int rownr = 0;
 					if( ( row = sqllib->FetchRow( sqllib, res ) ) )
 					{
 						if( row[ 0 ] != NULL && row[ 1 ] != NULL )
@@ -526,8 +525,6 @@ f.Name ASC";
 		{
 			type = (char *)el->data;
 		}
-		
-		int mountError = 0;
 		
 		//if( sessionid == NULL || devname == NULL )
 		if( devname == NULL )
@@ -815,7 +812,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 							);
 						}
 
-						void *res = sqllib->Query( sqllib, temptext );
+						sqllib->QueryWithoutResults( sqllib, temptext );
 
 						FFree( temptext );
 					}
@@ -1201,8 +1198,6 @@ AND LOWER(f.Name) = LOWER('%s')",
 		
 		if( devname != NULL )
 		{
-			int error = 0;
-			
 			SQLLibrary *sqllib  = l->LibrarySQLGet( l );
 			if( sqllib != NULL )
 			{
@@ -1547,7 +1542,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 					{
 						sysname = sys->Name;
 					}
-					Filesystem *fsys = ( Filesystem *)dev->f_DOSDriver;
+					//Filesystem *fsys = ( Filesystem *)dev->f_DOSDriver;
 					
 					EscapeConfigFromString( dev->f_Config, &configEscaped, &executeCmd );
 					

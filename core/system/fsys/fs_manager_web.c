@@ -1160,7 +1160,7 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 					char *offset = NULL;
 					char *bytes = NULL;
 					char *fallbackMime = NULL;
-					FBOOL returnStreamOnly =  FALSE;
+					//FBOOL returnStreamOnly =  FALSE;
 					FBOOL downloadMode  = FALSE;
 					
 					fallbackMime = GetMIMEByFilename( path );
@@ -1438,8 +1438,6 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 									ls->ls_Data = NULL;
 									char *outputBuf = finalBuffer;
 									
-									int offBuf = 0;
-								
 									// Try to skip embedded headers
 									char *ptr = strstr( finalBuffer, "---http-headers-end---\n" );
 									if( ptr != NULL )
@@ -1755,10 +1753,8 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 						}
 
 						FHandler *dsthand;
-						char *srcpath, *dstpath;
-						
-						File *copyFile;
-						
+						char *dstpath;
+
 						File *dstrootf = GetFileByPath( loggedSession->us_User, &dstpath, topath );
 						
 						DEBUG("[FSMWebRequest] COPY from %s TO %s\n", path, topath );
@@ -1780,8 +1776,7 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 									
 									dsthand = dstrootf->f_FSys;
 									FHandler *actFS = (FHandler *)actDev->f_FSys;
-									int rsize = 0;
-							
+
 									if( dstpath[ strlen( dstpath ) - 1 ] != '/' )	// simple copy file
 									{
 										DEBUG("[FSMWebRequest] Copy - executing file open on: %s to %s\n", path, topath );
@@ -2214,7 +2209,7 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 						sprintf( name, "%s", &path[ i ] );
 					}
 					
-					FHandler *actFS = (FHandler *)actDev->f_FSys;
+					//FHandler *actFS = (FHandler *)actDev->f_FSys;
 					FBOOL sharedFile = FALSE;
 					FBOOL alreadyExist = FALSE;
 					char hashmap[ 512 ];
@@ -2828,7 +2823,7 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 
 							int numberOfFiles = 0;
 							request->h_SB = l;
-							int error = FileDownloadFilesOrFolder( request, loggedSession, source, dstname, files, &numberOfFiles );
+							FileDownloadFilesOrFolder( request, loggedSession, source, dstname, files, &numberOfFiles );
 						
 							if( strcmp( archiver, "zip" ) == 0 )
 							{
@@ -2908,7 +2903,7 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 													*/
 													if( notify == TRUE )
 													{
-														int err2 = DoorNotificationCommunicateChanges( l, loggedSession, dstdevice, archpath );
+														DoorNotificationCommunicateChanges( l, loggedSession, dstdevice, archpath );
 													}
 												}
 											
@@ -3145,7 +3140,7 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 									
 									DEBUG("[FSMWebRequest] File upload %s\n", dsttmp );
 									
-									int error = FileUploadFileOrDirectory( request, loggedSession, dsttmp, dstname, filesExtracted );
+									FileUploadFileOrDirectory( request, loggedSession, dsttmp, dstname, filesExtracted );
 								
 									if( notify == TRUE )
 									{
@@ -3158,7 +3153,7 @@ Http *FSMWebRequest( void *m, char **urlpath, Http *request, UserSession *logged
 											{
 												dsttmpDup[ dsttmpLen ] = '/';
 											}
-											int err2 = DoorNotificationCommunicateChanges( l, loggedSession, actDev, dsttmpDup );
+											DoorNotificationCommunicateChanges( l, loggedSession, actDev, dsttmpDup );
 											FFree( dsttmpDup );
 										}
 									}

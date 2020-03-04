@@ -401,9 +401,6 @@ static inline void moveToHttps( Socket *sock )
 {
 	Http *response;
 	
-	char buf[ 1024 ];
-	int re = 0;
-	
 	/*
 	while( TRUE )
 	{
@@ -767,11 +764,10 @@ void *FriendCoreProcess__httponthefly( void *fcv )
 	}
 	
 	// First pass header, second, data
-	int pass = 0, bodyLength = 0, prevBufSize = 0, preroll = 0, stopReading = 0;
+	int pass = 0, bodyLength = 0;
 	
 	// Often used
-	int partialDivider = 0, foundDivider = 0, y = 0, x = 0, yc = 0, yy = 0;
-	char findDivider[ 5 ];
+	
 	char *std_Buffer = FCalloc( HTTP_READ_BUFFER_DATA_SIZE_ALLOC, sizeof( char ) );
 	if( std_Buffer != NULL )
 	{
@@ -1026,7 +1022,7 @@ void FriendCoreProcess( void *fcv )
 
 			// int count = the amount of data read
 			// int res = the amount of data read in one chunk
-			int count = preroll, res = 0, joints = 0, methodGet = 0;
+			int count = preroll, res = 0, joints = 0;
 
 			// We must find divider!
 
@@ -1064,7 +1060,7 @@ void FriendCoreProcess( void *fcv )
 							break; //drop the connection, rest of this function will do the cleanup
 						}
 						//write already received chunk
-						int wrote = write( tmpFileHandle, resultString->bs_Buffer, resultString->bs_Size );
+						write( tmpFileHandle, resultString->bs_Buffer, resultString->bs_Size );
 						BufStringDelete( resultString );
 					}
 				}
@@ -1078,11 +1074,11 @@ void FriendCoreProcess( void *fcv )
 				{
 					if( tmpFileHandle >= 0 )
 					{
-						int wrote = write( tmpFileHandle, locBuffer, res );
+						write( tmpFileHandle, locBuffer, res );
 					}
 					else
 					{
-						int err = BufStringAddSize( resultString, locBuffer, res );
+						BufStringAddSize( resultString, locBuffer, res );
 						incomingBufferPtr = resultString->bs_Buffer; //buffer can be in a different place after resize
 						incomingBufferLength = resultString->bs_Size;
 						//DEBUG( "Data added : %d res: %d count: %d received %d\n", err, res, count, count + res );
@@ -1698,15 +1694,9 @@ static inline void FriendCoreSelect( FriendCoreInstance* fc )
 static inline void FriendCoreEpoll( FriendCoreInstance* fc )
 {
 	int eventCount = 0;
-	int retval;
-	int i, ii;
+	int i;
 	struct epoll_event *currentEvent;
 	struct epoll_event *events = FCalloc( fc->fci_MaxPoll, sizeof( struct epoll_event ) );
-	ssize_t count;
-	Socket *sock = NULL;
-	
-	// Read buffer
-	char buffer[ fc->fci_BufferSize ];
 	
 	// add communication ReadCommPipe		
 	int pipefds[2] = {}; struct epoll_event piev = { 0 };	
@@ -1789,13 +1779,11 @@ static inline void FriendCoreEpoll( FriendCoreInstance* fc )
 				DEBUG( "[FriendCoreEpoll] Wake up!\n" );
 			}
 			// First handle pipe messages
-			else if( currentEvent->data.fd == fc->fci_ReadCorePipe ) //FIXME! pipe must be wrapped in a Socket*
+			else if( currentEvent->data.fd == fc->fci_ReadCorePipe )
 			{
 				// read all bytes from read end of pipe
 				char ch;
 				int result = 1;
-					
-				//DEBUG("[FriendCoreEpoll] FC Reads from pipe!\n");
 				
 				while( result > 0 )
 				{

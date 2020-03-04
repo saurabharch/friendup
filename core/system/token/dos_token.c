@@ -36,7 +36,6 @@ DOSToken *DOSTokenNew( UserSession *us, time_t timeout, int usedTimes )
 	DOSToken *dt = FCalloc( 1, sizeof(DOSToken) );
 	if( dt != NULL )
 	{
-		int i;
 		dt->ct_Timeout = time( NULL ) + timeout;
 		dt->ct_UserSession = us;
 		dt->ct_UserSessionID = us->us_ID;

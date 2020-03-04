@@ -186,7 +186,6 @@ void UserDelete( User *usr )
 {
 	if( usr != NULL )
 	{
-		int i;
 		if( FRIEND_MUTEX_LOCK( &(usr->u_Mutex) ) == 0 )
 		{
 			if( usr->u_Printers != NULL )

@@ -158,7 +158,7 @@ JSONData* JSONParse( char* str, unsigned int length )
 	char inObject    = FALSE;
 	char inObjectKey = FALSE;
 	char inArray     = FALSE;
-	char inValue     = FALSE;
+	//char inValue     = FALSE;
 	char doAdd       = FALSE;
 	char resetState  = FALSE;
 	char inEscape    = FALSE;
@@ -225,7 +225,7 @@ JSONData* JSONParse( char* str, unsigned int length )
 						if( inArray )
 						{
 							nextExpect = JSON_TYPE_VALUE | JSON_TYPE_ARRAY | JSON_TYPE_OBJECT;
-							JSONData* d = stack[level - 1];
+							//JSONData* d = stack[level - 1];
 						}
 						else if( inObject )
 						{
@@ -733,7 +733,7 @@ JSONData* JSONParse( char* str, unsigned int length )
 						return NULL;
 					}
 					HashmapPut( d->data, currentKey, currentNode );
-					HashmapElement* e = HashmapGet( d->data, currentKey );
+					//HashmapElement* e = HashmapGet( d->data, currentKey );
 					currentKey = NULL;
 					expect = JSON_TYPE_COMMA | JSON_TYPE_OBJECT_END;
 

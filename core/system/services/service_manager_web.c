@@ -48,7 +48,6 @@ Http *ServiceManagerWebRequest( void *lsb, char **urlpath, Http* request )
 {
 	SystemBase *l = (SystemBase *)lsb;
 	char *serviceName = NULL;
-	int newStatus = -1;
 	Service *selService = NULL;
 	
 	DEBUG("ServiceManagerWebRequest\n");

@@ -185,7 +185,6 @@ char *Base64Decode( const unsigned char* data, unsigned int length, int *finalLe
 									+ ( sextet_c << 6  )  // 1 * 6
 									+ ( sextet_d       ); // 0 * 6
 
-		int x = j;
 		if( j < output_length) decoded_data[j++] = (triple >> 16 ) & 0xFF; // 2 * 8
 		if( j < output_length) decoded_data[j++] = (triple >> 8  ) & 0xFF; // 1 * 8
 		if( j < output_length) decoded_data[j++] = (triple       ) & 0xFF; // 0 * 8

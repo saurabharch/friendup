@@ -156,7 +156,7 @@ Http* ApplicationWebRequest( SystemBase *l, char **urlpath, Http* request, UserS
 				{
 					//DEBUG("Parse application entry %s !\n" , lbs->bs_Buffer );
 					
-					int msg = BufStringAddSize( bs, lbs->bs_Buffer, lbs->bs_Size );
+					BufStringAddSize( bs, lbs->bs_Buffer, lbs->bs_Size );
 
 					BufStringDelete( lbs );
 				}
@@ -201,7 +201,6 @@ Http* ApplicationWebRequest( SystemBase *l, char **urlpath, Http* request, UserS
 		FBOOL usersOnly = FALSE;
 		response = HttpNewSimple( HTTP_200_OK,  tags );
 		char *assid = NULL;
-		char buffer[ 1024 ];
 		
 		HashmapElement *el = HashmapGet( request->parsedPostContent, "sasid" );
 		if( el != NULL )
@@ -221,7 +220,6 @@ Http* ApplicationWebRequest( SystemBase *l, char **urlpath, Http* request, UserS
 		if( assid != NULL )
 		{
 			char *end = NULL;
-			int assidlen = strlen( assid );
 			FUQUAD asval = strtoull( assid, &end, 0 );
 		
 			BufString *bs = BufStringNew();
@@ -432,7 +430,7 @@ Application.checkDocumentSession = function( sasID = null )
 					int err = AppSessionManagerAddSession( l->sl_AppSessionManager, as );
 					if( err == 0 )
 					{
-						int size = sprintf( buffer, "{ \"SASID\": \"%lu\",\"type\":%d }", as->as_SASID, as->as_Type );
+						sprintf( buffer, "{ \"SASID\": \"%lu\",\"type\":%d }", as->as_SASID, as->as_Type );
 						HttpAddTextContent( response, buffer );
 					}
 					else
@@ -506,7 +504,6 @@ Application.checkDocumentSession = function( sasID = null )
 		else
 		{
 			char *end = NULL;
-			int assidlen = strlen( assid );
 			FUQUAD asval = strtoull( assid,  &end, 0 );
 			AppSession *as = AppSessionManagerGetSession( l->sl_AppSessionManager, asval );
 			
@@ -531,7 +528,7 @@ Application.checkDocumentSession = function( sasID = null )
 					
 					if( err == 0 )
 					{
-						int size = sprintf( buffer, "{\"SASID\":\"%lu\"}", asval );
+						sprintf( buffer, "{\"SASID\":\"%lu\"}", asval );
 						HttpAddTextContent( response, buffer );
 					}
 					else
@@ -582,7 +579,7 @@ Application.checkDocumentSession = function( sasID = null )
 				
 					if( err == 0 )
 					{
-						int size = sprintf( buffer, "{\"SASID\":\"%lu\"}", asval );
+						sprintf( buffer, "{\"SASID\":\"%lu\"}", asval );
 						HttpAddTextContent( response, buffer );
 					}
 					else
@@ -665,7 +662,6 @@ Application.checkDocumentSession = function( sasID = null )
 		else
 		{
 			char *end = NULL;
-			int assidlen = strlen( assid );
 			FUQUAD asval = strtoull( assid, &end, 0 );
 			char buffer[ 1024 ];
 			
@@ -844,7 +840,6 @@ Application.checkDocumentSession = function( sasID = null )
 		else
 		{
 			char *end = NULL;
-			int assidlen = strlen( assid );
 			FUQUAD asval = strtoull( assid, &end, 0 );
 			char buffer[ 1024 ];
 			
@@ -876,7 +871,7 @@ Application.checkDocumentSession = function( sasID = null )
 				
 				if( error == 0 )
 				{
-					int size = sprintf( buffer,"{\"response\":\"%s\",\"identity\":\"%s\"}", "success", as->as_UserSessionList->usersession->us_User->u_Name );
+					sprintf( buffer,"{\"response\":\"%s\",\"identity\":\"%s\"}", "success", as->as_UserSessionList->usersession->us_User->u_Name );
 					HttpAddTextContent( response, buffer );
 				}
 				else
@@ -935,7 +930,6 @@ Application.checkDocumentSession = function( sasID = null )
 		}
 		
 		AppSession *as = NULL;
-		char buffer[ 1024 ];
 		char applicationName[ 1024 ];
 		applicationName[ 0 ] = 0;
 		
@@ -944,8 +938,7 @@ Application.checkDocumentSession = function( sasID = null )
 			char *end;
 			FUQUAD asval = strtoul( assid,  &end, 0 );
 			DEBUG("[ApplicationWebRequest] ASSID %s endptr-startp %d\n", assid, (int)(end-assid) );
-			int errors = 0;
-			
+
 			as = AppSessionManagerGetSession( l->sl_AppSessionManager, asval );
 		}
 		
@@ -1222,7 +1215,7 @@ Application.checkDocumentSession = function( sasID = null )
 				}
 				if( err > 0 )
 				{
-					int size = sprintf( buffer, "{\"response\":\"success\"}" );
+					sprintf( buffer, "{\"response\":\"success\"}" );
 					HttpAddTextContent( response, buffer );
 				}
 				else
@@ -1236,7 +1229,7 @@ Application.checkDocumentSession = function( sasID = null )
 				
 				if( as->as_Obsolete == TRUE )
 				{
-					int err = AppSessionManagerRemSession( l->sl_AppSessionManager, as );
+					AppSessionManagerRemSession( l->sl_AppSessionManager, as );
 				}
 			}
 			else
@@ -1308,7 +1301,6 @@ Application.checkDocumentSession = function( sasID = null )
 		if( assid != NULL && msg != NULL )
 		{
 			char *end;
-			int assidlen = strlen( assid );
 			FUQUAD asval = strtoull( assid,  &end, 0 );
 			AppSession *as = AppSessionManagerGetSession( l->sl_AppSessionManager, asval );
 			
@@ -1329,7 +1321,7 @@ Application.checkDocumentSession = function( sasID = null )
 				FERROR("Messages sent %d\n", err );
 				if( err > 0 )
 				{
-					int size = sprintf( buffer, "{\"response\":\"success\"}" );
+					sprintf( buffer, "{\"response\":\"success\"}" );
 					HttpAddTextContent( response, buffer );
 				}
 				else
@@ -1343,7 +1335,7 @@ Application.checkDocumentSession = function( sasID = null )
 				
 				if( as->as_Obsolete == TRUE )
 				{
-					int err = AppSessionManagerRemSession( l->sl_AppSessionManager, as );
+					AppSessionManagerRemSession( l->sl_AppSessionManager, as );
 				}
 			}
 			else
@@ -1414,7 +1406,6 @@ Application.checkDocumentSession = function( sasID = null )
 		if( assid != NULL && devid != NULL && username != NULL )
 		{
 			char *end;
-			int assidlen = strlen( assid );
 			FUQUAD asval = strtoull( assid,  &end, 0 );
 			AppSession *as = AppSessionManagerGetSession( l->sl_AppSessionManager, asval );
 			
@@ -1455,7 +1446,6 @@ Application.checkDocumentSession = function( sasID = null )
 						UserSession *tmpses = srcli->usersession;
 						int tmpstatus = srcli->status;
 
-						char tmp[ 1024 ];
 						//int len = sprintf( tmp, "{\"type\":\"msg\",\"data\": { \"type\":\"%s\", \"data\":{\"type\":\"%llu\", \"data\":{ \"identity\":{\"username\":\"%s\"},\"data\": {\"type\":\"client-decline\",\"data\":\"%s\"}\"}}}}}", le->authid, as->as_ASSID, loggedSession->us_User->u_Name, assid, tmpses->us_User->u_Name );
 						//int msgsndsize += WebSocketSendMessageInt( le->usersession, tmp, len );
 					
@@ -1463,7 +1453,7 @@ Application.checkDocumentSession = function( sasID = null )
 						dstli->usersession = tmpses;
 						dstli->status = tmpstatus;
 					
-						int size = sprintf( buffer, "{\"response\":\"success\"}" );
+						sprintf( buffer, "{\"response\":\"success\"}" );
 						HttpAddTextContent( response, buffer );
 					}
 					else
@@ -1532,8 +1522,7 @@ Application.checkDocumentSession = function( sasID = null )
 		
 		char *assid = NULL;
 		char *devid = NULL;
-		char buffer[ 1024 ];
-		
+
 		response = HttpNewSimple( HTTP_200_OK,  tags );
 		
 		HashmapElement *el =  HashmapGet( request->parsedPostContent, "sasid" );
@@ -1545,7 +1534,6 @@ Application.checkDocumentSession = function( sasID = null )
 		if( assid != NULL && devid != NULL )
 		{
 			char *end;
-			int assidlen = strlen( assid );
 			FUQUAD asval = strtoull( assid,  &end, 0 );
 			AppSession *as = AppSessionManagerGetSession( l->sl_AppSessionManager, asval );
 			
@@ -1786,12 +1774,12 @@ Application.checkDocumentSession = function( sasID = null )
 				
 				if( le != NULL )
 				{
-					int size = sprintf( buffer, "{\"VariableNumber\":\"%lu\"}", le->ne_ID );
+					sprintf( buffer, "{\"VariableNumber\":\"%lu\"}", le->ne_ID );
 					HttpAddTextContent( response, buffer );
 				}
 				else
 				{
-					int size = sprintf( buffer, "{\"VariableNumber\":\"%d\"}", -1 );
+					sprintf( buffer, "{\"VariableNumber\":\"%d\"}", -1 );
 					HttpAddTextContent( response, buffer );
 				}
 			}
@@ -1828,7 +1816,6 @@ Application.checkDocumentSession = function( sasID = null )
 	{
 		char *assid = NULL;
 		char *varid = NULL;
-		char *var = NULL;
 		
 		struct TagItem tags[] = {
 			{ HTTP_HEADER_CONTENT_TYPE, (FULONG) StringDuplicate( "text/html" ) },
@@ -1851,7 +1838,7 @@ Application.checkDocumentSession = function( sasID = null )
 		if( assid != NULL && varid != NULL )
 		{
 			char *end;
-			int assidlen = strlen( assid );
+			//int assidlen = strlen( assid );
 			FUQUAD asval = strtoull( assid,  &end, 0 );
 			AppSession *as = AppSessionManagerGetSession( l->sl_AppSessionManager, asval );
 			
@@ -1913,7 +1900,7 @@ Application.checkDocumentSession = function( sasID = null )
 				}
 				else
 				{
-					int size = sprintf( buffer, "{\"VariableData\":\"\"}" );
+					sprintf( buffer, "{\"VariableData\":\"\"}" );
 					HttpAddTextContent( response, buffer );
 				}
 			}

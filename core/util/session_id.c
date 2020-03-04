@@ -113,7 +113,7 @@ FBOOL GenerateUUID( char **dst )
 		if( (*dst) != NULL )
 		{
 			char tmp[ KEY_TEMP_LEN ];
-			int i, j=0;
+			int i;
 			MyGetentropy( tmp, KEY_TEMP_LEN );
 			for ( i = 0; i < KEY_TEMP_LEN; i++ )
 			{

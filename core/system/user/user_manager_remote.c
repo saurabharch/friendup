@@ -100,8 +100,8 @@ int UMAddGlobalRemoteUser( UserManager *um, const char *name, const char *sessid
 int UMRemoveGlobalRemoteUser( UserManager *um, const char *name, const char *hostname )
 {
 	DEBUG("[UMRemoveGlobalRemoteUser] start\n");
-	SystemBase *sb = (SystemBase *)um->um_SB;
-	CommService *service = sb->fcm->fcm_CommService;
+	//SystemBase *sb = (SystemBase *)um->um_SB;
+	//CommService *service = sb->fcm->fcm_CommService;
 	
 	RemoteUser *actUsr = um->um_RemoteUsers;
 	RemoteUser *prevUsr = actUsr;
@@ -369,8 +369,6 @@ int UMAddGlobalRemoteDrive( UserManager *um, const char *locuname, const char *u
 int UMRemoveGlobalRemoteDrive( UserManager *um, const char *uname, const char *hostname, char *localDevName, char *remoteDevName )
 {
 	DEBUG("[UMRemoveGlobalRemoteDrive] start\n");
-	FBOOL registerUser = FALSE;
-	FBOOL registerDrive = FALSE;
 	FConnection *con = NULL;
 	SystemBase *sb = (SystemBase *)um->um_SB;
 	
@@ -421,7 +419,7 @@ int UMRemoveGlobalRemoteDrive( UserManager *um, const char *uname, const char *h
 				{
 					CommService *service = sb->fcm->fcm_CommService;
 					// we can try to delete connection if its not used
-					int err = CommServiceDelConnection( service, actUsr->ru_Connection, NULL );
+					CommServiceDelConnection( service, actUsr->ru_Connection, NULL );
 				}
 				RemoteDriveDelete( remDri );
 			}
@@ -565,8 +563,6 @@ int UMAddRemoteDriveToUser( UserManager *um, FConnection *con, const char *locun
 int UMRemoveRemoteDriveFromUser( UserManager *um, FConnection *con, const char *locuname, const char *uname, const char *authid, const char *hostname, char *localDevName __attribute__((unused)), char *remoteDevName __attribute__((unused)) )
 {
 	User *locusr = um->um_Users;
-	RemoteDrive *locremdri = NULL;
-	SystemBase *sb = (SystemBase *)um->um_SB;
 	
 	while( locusr != NULL )
 	{

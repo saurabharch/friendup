@@ -505,13 +505,9 @@ int AppSessionRemUser( AppSession *as, User *u )
 SASUList *AppSessionAddCurrentUserSession( AppSession *as, UserSession *loggedSession )
 {
 	// remove spaces and 'weird' chars from entry
-	unsigned int i, j=0;
-	int  pos = 0;
-	unsigned int usersi  = 0;
 	char *upositions[ 128 ];
 	memset( upositions, 0, sizeof( upositions ) );
 	SASUList *retListEntry = NULL;
-	SystemBase *l = (SystemBase *)as->as_SB;
 	
 	//DEBUG("[AppSession] sessid %s\n", sessid );
 	
@@ -579,9 +575,6 @@ SASUList *AppSessionAddCurrentUserSession( AppSession *as, UserSession *loggedSe
 SASUList *AppSessionAddUsersBySession( AppSession *as, UserSession *loggedSession, char *sessid, char *appname, char *msg )
 {
 	// remove spaces and 'weird' chars from entry
-	unsigned int i, j=0;
-	int  pos = 0;
-	unsigned int usersi  = 0;
 	char *upositions[ 128 ];
 	memset( upositions, 0, sizeof( upositions ) );
 	SASUList *retListEntry = NULL;
@@ -637,7 +630,7 @@ SASUList *AppSessionAddUsersBySession( AppSession *as, UserSession *loggedSessio
 				if( retListEntry != NULL && msg != NULL )
 				{
 					char tmp[ 512 ];
-					int tmpsize = snprintf( tmp, sizeof(tmp), "{\"name\":\"%s\",\"deviceid\":\"%s\",\"result\":\"invited\"}", usrses->us_User->u_Name, usrses->us_DeviceIdentity );
+					snprintf( tmp, sizeof(tmp), "{\"name\":\"%s\",\"deviceid\":\"%s\",\"result\":\"invited\"}", usrses->us_User->u_Name, usrses->us_DeviceIdentity );
 
 					char tmpmsg[ 2048 ];
 					int len = sprintf( tmpmsg, "{ \"type\":\"msg\", \"data\":{\"type\":\"sasid-request\",\"data\":{\"sasid\":\"%lu\",\"message\":\"%s\",\"owner\":\"%s\" ,\"appname\":\"%s\"}}}", as->as_SASID, msg, loggedSession->us_User->u_Name , appname );
@@ -721,7 +714,6 @@ char *AppSessionAddUsersByName( AppSession *as, UserSession *loggedSession, char
 		userlistadded = FCalloc( SHIFT_LEFT( SHIFT_LEFT(usersi, 9), 3 ), sizeof(char) );
 		if( userlistadded != NULL )
 		{
-			int errors = 0;
 			strcpy( userlistadded, "{ \"invited\": [" );
 
 			//
@@ -776,12 +768,11 @@ char *AppSessionAddUsersByName( AppSession *as, UserSession *loggedSession, char
 
 							if( strcmp( upositions[ i ], usrses->us_User->u_Name ) == 0 )
 							{
-								int err = 0;
 								char tmp[ 512 ];
 
 								if( usrses->us_WSConnections == NULL )
 								{
-									int tmpsize = snprintf( tmp, sizeof(tmp), "{\"name\":\"%s\",\"deviceid\":\"%s\",\"result\":\"not invited\"}", usrses->us_User->u_Name, usrses->us_DeviceIdentity );
+									snprintf( tmp, sizeof(tmp), "{\"name\":\"%s\",\"deviceid\":\"%s\",\"result\":\"not invited\"}", usrses->us_User->u_Name, usrses->us_DeviceIdentity );
 									if( pos > 0  )
 									{
 										strcat( userlistadded, "," );
@@ -803,7 +794,7 @@ char *AppSessionAddUsersByName( AppSession *as, UserSession *loggedSession, char
 
 									if( sli != NULL )
 									{
-										int tmpsize = snprintf( tmp, sizeof(tmp), "{\"name\":\"%s\",\"deviceid\":\"%s\",\"result\":\"invited\"}", usrses->us_User->u_Name, usrses->us_DeviceIdentity );
+										snprintf( tmp, sizeof(tmp), "{\"name\":\"%s\",\"deviceid\":\"%s\",\"result\":\"invited\"}", usrses->us_User->u_Name, usrses->us_DeviceIdentity );
 
 										if( pos > 0  )
 										{
@@ -841,7 +832,7 @@ char *AppSessionAddUsersByName( AppSession *as, UserSession *loggedSession, char
 					if( ses != NULL && ses->us_WSConnections != NULL && ses != loggedSession )
 					{
 						char tmp[ 512 ];
-						int tmpsize = snprintf( tmp, sizeof(tmp), "{\"name\":\"%s\",\"deviceid\":\"%s\",\"result\":\"invited\"}", ses->us_User->u_Name, ses->us_DeviceIdentity );
+						snprintf( tmp, sizeof(tmp), "{\"name\":\"%s\",\"deviceid\":\"%s\",\"result\":\"invited\"}", ses->us_User->u_Name, ses->us_DeviceIdentity );
 					
 						if( pos > 0  )
 						{
@@ -949,7 +940,6 @@ BufString *AppSessionRemUserByNames( AppSession *as, UserSession *loggedSession,
 	}
 
 	SASUList **rementr = NULL;
-	User *assidAdmin = NULL;
 	UserSession *adminSession = NULL;
 	SASUList *asul = NULL;
 	unsigned int rementrnum = 0;

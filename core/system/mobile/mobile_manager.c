@@ -358,7 +358,6 @@ UserMobileApp *GetMobileAppByUserName( MobileManager *mmgr, SQLLibrary *sqllib, 
 	if( res != NULL )
 	{
 		char **row;
-		int rownr = 0;
 		while( ( row = sqllib->FetchRow( sqllib, res ) ) )
 		{
 			// create new structure
@@ -417,7 +416,6 @@ UserMobileApp *GetMobileAppByUserName( MobileManager *mmgr, SQLLibrary *sqllib, 
  */
 FULONG MobileManagerGetUMAIDByDeviceIDAndUserName( MobileManager *mmgr, SQLLibrary *sqllib, FULONG userID, const char *deviceid )
 {
-	UserMobileApp *root = NULL;
 	char query[ 256 ];
 	FULONG tokID = 0;
 	
@@ -453,7 +451,6 @@ FULONG MobileManagerGetUMAIDByDeviceIDAndUserName( MobileManager *mmgr, SQLLibra
  */
 FULONG MobileManagerGetUMAIDByTokenAndUserName( MobileManager *mmgr, SQLLibrary *sqllib, FULONG userID, const char *token )
 {
-	UserMobileApp *root = NULL;
 	char query[ 256 ];
 	FULONG tokID = 0;
 	

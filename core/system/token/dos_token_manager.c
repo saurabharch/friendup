@@ -90,43 +90,44 @@ int DOSTokenManagerDeleteToken( DOSTokenManager *d, char *id )
 	{
 		DEBUG("DOSTokenManagerDeleteToken\n");
 		
-		FRIEND_MUTEX_LOCK( &d->dtm_Mutex );
-		time_t now = time( NULL );
-		
-		DOSToken *newTokenList = NULL;
-		
-		DOSToken *dt = d->dtm_Tokens;
-		
-		while( dt != NULL )
+		if( FRIEND_MUTEX_LOCK( &d->dtm_Mutex ) == 0 )
 		{
-			DOSToken *oldToken = NULL;
-			FBOOL remove = FALSE;
+
+			DOSToken *newTokenList = NULL;
 			
-			// if token is not valid, we remove it
+			DOSToken *dt = d->dtm_Tokens;
 			
-			if( strcmp( id, dt->ct_TokenID ) == 0 )
+			while( dt != NULL )
 			{
-				remove = TRUE;
-			}
+				DOSToken *oldToken = NULL;
+				FBOOL remove = FALSE;
 			
-			oldToken = dt;
-			dt = (DOSToken *)dt->node.mln_Succ;
+				// if token is not valid, we remove it
 			
-			if( remove == TRUE )
-			{
-				DOSTokenDelete( oldToken );
-				err = 0;
+				if( strcmp( id, dt->ct_TokenID ) == 0 )
+				{
+					remove = TRUE;
+				}
+			
+				oldToken = dt;
+				dt = (DOSToken *)dt->node.mln_Succ;
+			
+				if( remove == TRUE )
+				{
+					DOSTokenDelete( oldToken );
+					err = 0;
+				}
+				else
+				{
+					oldToken->node.mln_Succ = (MinNode *)newTokenList;
+					newTokenList = oldToken;
+				}
 			}
-			else
-			{
-				oldToken->node.mln_Succ = (MinNode *)newTokenList;
-				newTokenList = oldToken;
-			}
+		
+			d->dtm_Tokens = newTokenList;
+		
+			FRIEND_MUTEX_UNLOCK( &d->dtm_Mutex );
 		}
-		
-		d->dtm_Tokens = newTokenList;
-		
-		FRIEND_MUTEX_UNLOCK( &d->dtm_Mutex );
 	}
 	return err;
 }
@@ -152,8 +153,6 @@ DOSToken *DOSTokenManagerGetDOSToken( DOSTokenManager *d, const char *tokenID )
 		
 		while( dt != NULL )
 		{
-			DOSToken *remToken = NULL;
-			
 			// if token was found we are checking how many times it was used
 			if( dt->ct_UsedTimes != 0 && strcmp( tokenID, dt->ct_TokenID ) == 0 )
 			{

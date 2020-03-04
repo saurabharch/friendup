@@ -542,7 +542,8 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 	* @param password - (required) password
 	* @param fullname  - full user name
 	* @param email - user email
-	* @param level - groups to which user will be assigned, separated by comma
+	* @param level - groups to which user will be assigned, separated by comma (user level)
+	* @param workgroups - workgroups to which user will be assigned, separated by comma
 	* @return { create: sucess } when success, otherwise error with code
 	*/
 	/// @endcond
@@ -562,6 +563,7 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 		char *fullname = NULL;
 		char *email = NULL;
 		char *level = NULL;
+		char *workgroups = NULL;
 		//FULONG id = 0;
 		FBOOL userCreated = FALSE;
 		
@@ -583,6 +585,13 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 			{
 				usrpass = UrlDecodeToMem( (char *)el->data );
 				DEBUG( "[UMWebRequest] Update usrpass %s!!\n", usrpass );
+			}
+			
+			el = HttpGetPOSTParameter( request, "workgroups" );
+			if( el != NULL )
+			{
+				workgroups = UrlDecodeToMem( (char *)el->data );
+				DEBUG("Workgroups found!: %s\n", workgroups );
 			}
 			
 			if( usrname != NULL && usrpass != NULL )
@@ -643,7 +652,7 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 							HttpAddTextContent( response, buffer );
 						}
 						
-						UGMAssignGroupToUserByStringDB( l->sl_UGM, locusr, level, NULL );
+						UGMAssignGroupToUserByStringDB( l->sl_UGM, locusr, level, workgroups );
 						
 						NotifyExtServices( l, request, locusr, "create" );
 						
@@ -670,6 +679,11 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 		if( level != NULL )
 		{
 			FFree( level );
+		}
+		
+		if( workgroups != NULL )
+		{
+			FFree( workgroups );
 		}
 		
 		if( userCreated == TRUE )
@@ -2226,10 +2240,7 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 		// we are going through users and their sessions
 		// if session is active then its returned
 		
-		time_t  timestamp = time( NULL );
-		
 		int msgsndsize = 0; 
-		int pos = 0;
 		int msgsize = 1024;
 		
 		if( msg != NULL )

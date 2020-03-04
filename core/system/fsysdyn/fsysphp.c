@@ -1267,7 +1267,7 @@ int MakeDir( struct File *f, const char *path )
 	DEBUG("[fsysphp] makedir filesystem\n");
 	if( f != NULL && f->f_SpecialData != NULL )
 	{
-		SpecialData *sd = (SpecialData *)f->f_SpecialData;
+		//SpecialData *sd = (SpecialData *)f->f_SpecialData;
 		
 		char *comm = NULL;
 		if( !PathHasColon( (char *) path ) )

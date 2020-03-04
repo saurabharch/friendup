@@ -350,8 +350,6 @@ int WebsocketClientSendMessage( WebsocketClient *cl, char *msg, int len )
 	{
 		if( cl->wc_WSI != NULL && cl->wc_ToRemove == FALSE )
 		{
-			int val;
-		
 			FQEntry *en = FCalloc( 1, sizeof( FQEntry ) );
 			if( en != NULL )
 			{

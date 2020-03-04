@@ -84,8 +84,6 @@ Http *TokenWebRequest( void *m, char **urlpath, Http **request, UserSession *log
 	/// @endcond
 	if( strcmp( urlpath[ 1 ], "list" ) == 0 )
 	{
-		int pos = 0;
-
 		if( UMUserIsAdmin( l->sl_UM, (*request), loggedSession->us_User ) == TRUE )
 		{
 			BufString *bs = DOSTokenManagerList( l->sl_DOSTM );
@@ -121,7 +119,6 @@ Http *TokenWebRequest( void *m, char **urlpath, Http **request, UserSession *log
 		char *tokensesid = NULL;	// token sessionid
 		int  times = 1;				// one time token
 		time_t timeout = 5 * 60;	// 5 minutes
-		int pos = 0;
 		
 		el = GetHEReq( *request, "command" );
 		if( el != NULL && el->data )

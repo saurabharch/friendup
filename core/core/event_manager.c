@@ -301,10 +301,11 @@ int EventAdd( EventManager *em, char *name, void *function, void *data, time_t n
 }
 
 /**
- * Force call an event
+ * Check and run event if there is need
  *
  * @param em pointer to the event manager structure
- * @param id ID of the event to call
+ * @param ev pointer to CoreEvent
+ * @param ti current timestamp
  * @return NULL
  */
 CoreEvent *EventCheck( EventManager *em, CoreEvent *ev, time_t ti )

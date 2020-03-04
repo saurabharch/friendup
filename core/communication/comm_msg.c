@@ -45,7 +45,7 @@ int64_t DataFormWriteGroup( FBYTE **data, MsgItem **mi )
 		int64_t res = 0;
 
 		memcpy( (*data), (*mi), COMM_MSG_HEADER_SIZE );
-		char *t = (char *)*data;
+
 		uint64_t *sizeptr = (uint64_t *)( (*data)+sizeof(uint64_t) );
 		(*data) += COMM_MSG_HEADER_SIZE;
 		size += COMM_MSG_HEADER_SIZE;
@@ -490,8 +490,7 @@ DataForm *DataFormFromHttp( Http *http )
 				}
 				else
 				{
-					int size = 0;
-					
+
 					if( e.data != NULL )
 					{
 						char *data = UrlDecodeToMem( (char *)e.data );

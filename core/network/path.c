@@ -23,7 +23,6 @@
 static inline void PathSplit( Path* p )
 {
 	char* path = p->raw;
-	char** pathArray = NULL;
 	char* pathStart = path;
 	p->resolved = TRUE;
 	

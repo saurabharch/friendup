@@ -185,9 +185,7 @@ void CommServiceDelete( CommService *s )
 		}
 		
 		FRIEND_MUTEX_LOCK( &s->s_Mutex );
-		SystemBase *lsb = (SystemBase *)s->s_SB;
-		FriendCoreManager *fcm = lsb->fcm;
-		
+
 		DEBUG("[COMMSERV] Closing connections : Incoming\n");
 		// close incoming connections
 		
@@ -623,7 +621,6 @@ int CommServiceThreadServer( FThread *ptr )
 
 		{
 			int eventCount;
-			int retval;
 			int i;
 			
 			struct epoll_event currentEvent;
@@ -839,7 +836,6 @@ int CommServiceThreadServer( FThread *ptr )
 								printf("_%c_ ", bs->bs_Buffer[ z ] );
 							printf("\n");
 							
-							int j = 0;
 							if( df->df_ID == ID_FCRE && count > 24 )
 							{
 								//char *id = (char *)&(df[ 2 ].df_ID);
@@ -963,8 +959,6 @@ int CommServiceThreadServer( FThread *ptr )
 
 										char address[ INET6_ADDRSTRLEN ];
 										inet_ntop( AF_INET6, &sock->ip, address, INET6_ADDRSTRLEN );
-
-										int err = 0;
 
 										DEBUG("[COMMSERV] Outgoing connection created on port: %d\n", service->s_port);
 										//SocketSetBlocking( newcon->cfcc_Socket, TRUE );
@@ -1220,7 +1214,6 @@ int CommServiceUnRegisterEvent( FConnection *con __attribute__((unused)), Socket
  */
 FConnection *CommServiceAddConnection( CommService* s, Socket* socket, char *name, char *addr, char *recvid, int type, int cluster )
 {
-	struct sockaddr_in clientAddr;
 	SystemBase *lsb = (SystemBase *)s->s_SB;
 	FULONG clusterID = 0;
 	FriendCoreManager *fcm = (FriendCoreManager *) lsb->fcm;
@@ -1346,7 +1339,7 @@ FConnection *CommServiceAddConnection( CommService* s, Socket* socket, char *nam
 	{
 		// get IP from socket
 		
-		struct sockaddr_in6 serveraddr, clientaddr;
+		struct sockaddr_in6 clientaddr;
 		socklen_t addrlen = sizeof( clientaddr );
 		getpeername( socket->fd, (struct sockaddr *)&clientaddr, &addrlen);
 		if( inet_ntop( AF_INET6, &clientaddr.sin6_addr, recvaddr, sizeof( recvaddr ) ) ) 
@@ -1506,7 +1499,7 @@ FConnection *CommServiceAddConnection( CommService* s, Socket* socket, char *nam
 			char tmpQuery[ 256 ];
 			sprintf( tmpQuery, "UPDATE `FClusterNode` SET NodeID='%lu' WHERE ID=%lu", cfcn->fc_ClusterID, cfcn->fc_ID );
 
-			int error = sqllib->QueryWithoutResults( sqllib, tmpQuery );
+			sqllib->QueryWithoutResults( sqllib, tmpQuery );
 			DEBUG("CluserID updated: %lu for ID %lu\n", clusterID, cfcn->fc_ClusterID );
 		
 			lsb->LibrarySQLDrop( lsb, sqllib );
@@ -1527,14 +1520,11 @@ FConnection *CommServiceAddConnection( CommService* s, Socket* socket, char *nam
  */
 FConnection *CommServiceAddConnectionByAddr( CommService* s, char *addr )
 {
-	struct sockaddr_in clientAddr;
-
 	if( addr == NULL )
 	{
 		return NULL;
 	}
 	
-	FConnection *cfcn = NULL;
 	FConnection *con  = s->s_Connections;
 
 	while( con != NULL )
@@ -1563,7 +1553,7 @@ FConnection *CommServiceAddConnectionByAddr( CommService* s, char *addr )
 	{
 		if( result->bs_Size > 0 )
 		{
-			DataForm *resultDF = (DataForm *)result->bs_Buffer;
+			//DataForm *resultDF = (DataForm *)result->bs_Buffer;
 			memcpy( id, &(result->bs_Buffer[ 73 ]), FRIEND_CORE_MANAGER_ID_SIZE );
 		}
 		
@@ -1584,8 +1574,6 @@ FConnection *CommServiceAddConnectionByAddr( CommService* s, char *addr )
  */
 int CommServiceDelConnection( CommService* s, FConnection *loccon, Socket *sock )
 {
-	SystemBase *lsb = (SystemBase *)s->s_SB;
-	FriendCoreManager *fcm = (FriendCoreManager *)lsb->fcm; //s->s_FCM;
 	FConnection *con  = NULL, *prevcon;
 	
 	DEBUG("[CommServiceDelConnection] Start\n");
@@ -1861,9 +1849,7 @@ void CommServicePING( CommService* s )
 	{
 		return;
 	}
-	SystemBase *lsb = (SystemBase *)s->s_SB;
-	FriendCoreManager *fcm = (FriendCoreManager *)lsb->fcm; //s->s_FCM;
-	
+
 	FRIEND_MUTEX_LOCK( &s->s_Mutex );
 	FConnection *con = s->s_Connections;
 	FRIEND_MUTEX_UNLOCK( &s->s_Mutex );

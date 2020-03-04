@@ -1127,7 +1127,6 @@ static inline int HttpParsePartialRequestChunked( Http* http, char* data, unsign
 		Log( FLOG_ERROR,"Cannot parse NULL requiest\n");
 		return -1;
 	}
-	long chunkSize = 0;
 	char chunkSizeString[ 6 ];
 	chunkSizeString[ 4 ] = 0;
 	
@@ -1151,7 +1150,6 @@ static inline int HttpParsePartialRequestChunked( Http* http, char* data, unsign
 		if( length > 0 )
 		{
 			// we must copy chunk after chunk
-			long chunk = 0;
 			long left = length;
 			char *ptr = data;
 			char *dst = http->content;
@@ -1236,7 +1234,7 @@ static inline int HttpParsePartialRequestChunked( Http* http, char* data, unsign
 				{
 					HashmapFree( http->parsedPostContent );
 				}
-				int ret = ParseMultipart( http );
+				ParseMultipart( http );
 				
 				DEBUG("MULTIPART\n");
 			}
@@ -1456,7 +1454,7 @@ int HttpParsePartialRequest( Http* http, char* data, unsigned int length )
 				{
 					HashmapFree( http->parsedPostContent );
 				}
-				int ret = ParseMultipart( http );
+				ParseMultipart( http );
 				
 				DEBUG("MULTIPART\n");
 			}
@@ -2005,7 +2003,6 @@ char *HttpBuild( Http* http )
 		strings[ stringPos++ ] = tmpdat;
 
 		// Add all the custom headers
-		int iterator = 0;
 		i = 0;
 	
 		if( http->h_ResponseHeadersRelease == TRUE )
@@ -2130,8 +2127,7 @@ char *HttpBuildHeader( Http* http )
 		strings[ stringPos++ ] = tmpdat;
 
 		// Add all the custom headers
-		int iterator = 0;
-	
+
 		for( i = 0; i < HTTP_HEADER_END ; i++ )
 		{
 			if( http->h_RespHeaders[ i ] != NULL )

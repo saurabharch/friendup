@@ -288,7 +288,6 @@ int UserGroupMountWorkgroupDrives( DeviceManager *dm, User *usr, FULONG groupID 
 		char *ctype = NULL, *type = NULL;
 		char *execute = NULL;
 		FULONG id, storedBytes;
-		int j = 0;
 		char temptext[ 612 ]; memset( temptext, 0, sizeof(temptext) );
 		
 		// get drive details
@@ -770,8 +769,7 @@ AND f.Name = '%s'",
 			}
 	
 			char **row;
-			int j = 0;
-	
+
 			if( usingSentinel == 1 )
 			{
 				DEBUG( "[MountFS] %s - We are using sentinel!\n", usr->u_Name );
@@ -1256,7 +1254,6 @@ int MountFSNoUser( DeviceManager *dm, struct TagItem *tl, File **mfile, char **m
 		File *retFile = NULL;
 		struct TagItem *ltl = tl;
 		char *type = NULL;
-		char *path = NULL;
 		char *name = NULL;
 		UserSession *us = NULL;
 		FULONG dbid = 0;
@@ -1488,7 +1485,6 @@ int UnMountFS( DeviceManager *dm, struct TagItem *tl, User *usr, UserSession *lo
 		
 		if( remdev == NULL )
 		{
-			int i;
 			DEBUG("[UnMountFS] --remdevNULL, name : %s\n", name );
 			
 			UserGroupLink *ugl = usr->u_UserGroupLinks;
@@ -1637,7 +1633,7 @@ ug.UserID = '%ld' \
 									DEBUG( "[UnMountFS] Found the drive %s on user %s.\n", name, tmpUser->u_Name );
 							
 									File *succ = (File *)search->node.mln_Succ; // next
-									File *pred = (File *)search->node.mln_Pred; // prev
+									//File *pred = (File *)search->node.mln_Pred; // prev
 								
 									DEBUG( "[UnMountFS] Freeing this defunct device: %s (%s)\n", name, tmpUser->u_Name );
 								
@@ -1938,8 +1934,6 @@ WHERE `UserID` = '%ld' AND `Name` = '%s'", uid, devname );
 	// check if device is already on list
 	INFO("[GetUserDeviceByUserID] Mount user device from Database\n");
 	
-	int j = 0;
-	
 	while( ( row = sqllib->FetchRow( sqllib, res ) ) ) 
 	{
 		// Id, UserId, Name, Type, ShrtDesc, Server, Port, Path, Username, Password, Mounted
@@ -2074,7 +2068,7 @@ void UserNotifyFSEvent( DeviceManager *dm, char *evt, char *path )
 	//return; //test
 	
 	// Find the devname of path
-	int pass = 0, i = 0;
+	int i = 0;
 	char *devName = NULL;
 	int len = strlen( path );
 	for( i = 0; i < len; i++ )
@@ -2149,9 +2143,8 @@ int MountDoorByRow( DeviceManager *dm, User *usr, char **row, User *mountUser __
 		char *name = NULL;
 		char *execute = NULL;
 		FULONG id = 0;
-		File *mount = NULL;
 		FHandler *filesys = NULL;
-		FBOOL visible = TRUE;
+		//FBOOL visible = TRUE;
 		
 		if( row[ 0 ] != NULL ) { type = StringDuplicate( row[ 0 ] ); }
 		if( row[ 1 ] != NULL ){ server = StringDuplicate( row[  1 ] ); }
@@ -2230,7 +2223,7 @@ int MountDoorByRow( DeviceManager *dm, User *usr, char **row, User *mountUser __
 			}
 			
 			//INFO("[MountFS] %s - Localtype %s DDriverType %s\n", usr->u_Name, type, filedd->dd_Type );
-			
+			/*
 			struct TagItem tags[] = {
 				{FSys_Mount_Path, (FULONG)path},
 				{FSys_Mount_Server, (FULONG)server},
@@ -2248,6 +2241,7 @@ int MountDoorByRow( DeviceManager *dm, User *usr, char **row, User *mountUser __
 				{FSys_Mount_ID, (FULONG)id},
 				{TAG_DONE, TAG_DONE}
 			};
+			*/
 
 			// Using sentinel?
 			/*

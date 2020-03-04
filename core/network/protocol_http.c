@@ -676,9 +676,6 @@ Http *ProtocolHttp( Socket* sock, char* data, unsigned int length )
 						//
 						// Check if redirect is required
 						//
-						
-						char *newUrl = NULL;
-						
 
 						{
 							if( strcmp( SLIB->sl_ActiveModuleName, "fcdb.authmod" ) != 0 )
@@ -689,7 +686,7 @@ Http *ProtocolHttp( Socket* sock, char* data, unsigned int length )
 								char *command = FMalloc( MAX_LEN_PHP_INT_COMMAND );
 
 								// Make the commandline string with the safe, escaped arguments, and check for buffer overflows.
-								int cx = snprintf( command, MAX_LEN_PHP_INT_COMMAND-1, "php \"php/login.php\" \"%s\" \"%s\" \"%s\"; 2>&1", uri->path->raw, uri->queryRaw, request->content ); // SLIB->sl_ModuleNames
+								snprintf( command, MAX_LEN_PHP_INT_COMMAND-1, "php \"php/login.php\" \"%s\" \"%s\" \"%s\"; 2>&1", uri->path->raw, uri->queryRaw, request->content ); // SLIB->sl_ModuleNames
 								//if( !( cx >= 0 ) )
 								//{
 								//	FERROR( "[ProtocolHttp] snprintf\n" );;
@@ -831,7 +828,6 @@ Http *ProtocolHttp( Socket* sock, char* data, unsigned int length )
 					{
 						//FileShared *fs = NULL;
 						char query[ 1024 ];
-						int entries = 0;
 
 						Log( FLOG_DEBUG, "[ProtocolHttp] Shared file hash %s name %s\n", path->parts[ 1 ], path->parts[ 2 ] );
 
@@ -1923,7 +1919,6 @@ Http *ProtocolHttp( Socket* sock, char* data, unsigned int length )
 
 													if( code != NULL )
 													{
-														char *pEnd;
 														int errCode = -1;
 
 														char *next;
@@ -1953,7 +1948,6 @@ Http *ProtocolHttp( Socket* sock, char* data, unsigned int length )
 													if( resp != NULL )
 													{
 														const char *hsearche = "---http-headers-end---\n";
-														const int hsearchLene = 23;
 
 														char *tmp = NULL;
 														if( ( tmp = strstr( resp, hsearche ) ) != NULL )

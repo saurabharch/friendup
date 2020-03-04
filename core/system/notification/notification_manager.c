@@ -287,7 +287,6 @@ void NotificationManagerDelete( NotificationManager *nm )
 Notification *NotificationManagerGetDB( NotificationManager *nm,  FULONG id )
 {
 	Notification *n = NULL;
-	SystemBase *sb = (SystemBase *)nm->nm_SB;
 	char where[ 1024 ];
 	
 	snprintf( where, sizeof(where), "ID='%lu'", id );
@@ -313,7 +312,6 @@ Notification *NotificationManagerGetDB( NotificationManager *nm,  FULONG id )
 Notification *NotificationManagerGetTreeByNotifSentDB( NotificationManager *nm,  FULONG notifSentId )
 {
 	Notification *n = NULL;
-	SystemBase *sb = (SystemBase *)nm->nm_SB;
 	char where[ 1024 ];
 	
 	if( FRIEND_MUTEX_LOCK( &(nm->nm_Mutex) ) == 0 )	
@@ -353,7 +351,6 @@ Notification *NotificationManagerGetTreeByNotifSentDB( NotificationManager *nm, 
 NotificationSent *NotificationManagerGetNotificationsSentDB( NotificationManager *nm,  FULONG ID )
 {
 	NotificationSent *ns = NULL;
-	SystemBase *sb = (SystemBase *)nm->nm_SB;
 	char where[ 1024 ];
 	int entries;
 	
@@ -377,7 +374,6 @@ NotificationSent *NotificationManagerGetNotificationsSentDB( NotificationManager
 NotificationSent *NotificationManagerGetNotificationsSentByStatusDB( NotificationManager *nm,  FULONG ID, int status )
 {
 	NotificationSent *ns = NULL;
-	SystemBase *sb = (SystemBase *)nm->nm_SB;
 	char where[ 1024 ];
 	int entries;
 	
@@ -401,7 +397,6 @@ NotificationSent *NotificationManagerGetNotificationsSentByStatusDB( Notificatio
 NotificationSent *NotificationManagerGetNotificationsSentByStatusAndUMAIDDB( NotificationManager *nm, int status, FULONG umaID )
 {
 	NotificationSent *ns = NULL;
-	SystemBase *sb = (SystemBase *)nm->nm_SB;
 	char where[ 1024 ];
 	int entries;
 	
@@ -426,7 +421,6 @@ NotificationSent *NotificationManagerGetNotificationsSentByStatusAndUMAIDDB( Not
 NotificationSent *NotificationManagerGetNotificationsSentByStatusPlatformAndUMAIDDB( NotificationManager *nm, int status, int platform, FULONG umaID )
 {
 	NotificationSent *ns = NULL;
-	SystemBase *sb = (SystemBase *)nm->nm_SB;
 	char where[ 1024 ];
 	int entries;
 	
@@ -1277,7 +1271,7 @@ void NotificationManagerTimeoutThread( FThread *data )
 					nm->nm_NumberOfLaunchedThreads++;
 					FRIEND_MUTEX_UNLOCK( &(nm->nm_Mutex) );
 				}
-				FThread *t = ThreadNew( NotificationSendThread, sntd, TRUE, NULL );
+				ThreadNew( NotificationSendThread, sntd, TRUE, NULL );
 			}
 			/*
 			DelListEntry *le = rootDeleteList;

@@ -866,7 +866,7 @@ char *GetStringFromJSON( char *text, char *token )
 	
 		valPtr += strlen( token )+4;	// we move to the end of "TOKEN":"
 		retValue = valPtr;
-		int index = 0;
+
 		// we want to end string by putting 0 on the end
 		
 		while( *valPtr != 0 )

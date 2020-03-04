@@ -36,8 +36,8 @@ KeyValueList *KeyValueListNew( )
 /**
  * Create new KeyValueList with data
  *
- * @param key
- * @param value
+ * @param key - key name
+ * @param value - value of key
  * @return pointer to new created KeyValueList
  */
 
@@ -104,8 +104,8 @@ int KeyValueListDeleteAll( KeyValueList *list )
  * Set key and value on KeyValueList
  *
  * @param list pointer to KeyValueList
- * @param key
- * @param value
+ * @param key - key name
+ * @param value - value of key
  * @return 0 if success, otherwise error number
  */
 

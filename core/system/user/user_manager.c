@@ -191,16 +191,15 @@ int UMAssignApplicationsToUser( UserManager *smgr, User *usr )
 		// Fetch from mysql
 		char **row;
 		int j = 0;
-		UserApplication *prev = NULL;
-	
+
 		while( ( row = sqlLib->FetchRow( sqlLib, result ) ) )
 		{
 			// first are column names
 			if( j >= 1 )
 			{
-				FULONG rid = atol( row[ 0 ] );
-				FULONG uid = atol( row[ 1 ] );
-				FULONG aid = atol( row[ 2 ] );
+				//FULONG rid = atol( row[ 0 ] );
+				//FULONG uid = atol( row[ 1 ] );
+				//FULONG aid = atol( row[ 2 ] );
 				/*
 				// Get single user application structure
 				UserApplication *ap = UserAppNew( rid, aid, row[3], row[4] );
@@ -366,8 +365,6 @@ int UMUserCreate( UserManager *smgr, Http *r __attribute__((unused)), User *usr 
 		DEBUG("[UMUserCreate]: user exist already!\n");
 		return 1;
 	}
-	
-	time_t timestamp = time ( NULL );
 	
 	if( usr->u_Name != NULL )
 	{

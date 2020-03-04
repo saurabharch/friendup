@@ -121,8 +121,7 @@ Http *MobileWebRequest( void *m, char **urlpath, Http* request, UserSession *log
 		char *platform = NULL;
 		char *version = NULL;
 		char *deviceID = NULL;
-		FBOOL uappCreated = FALSE;
-		
+
 		DEBUG( "[MobileWebRequest] Create user mobile app!!\n" );
 		
 		HashmapElement *el = NULL;
@@ -193,7 +192,6 @@ Http *MobileWebRequest( void *m, char **urlpath, Http* request, UserSession *log
 			{
 				char buffer[ 256 ];
 				int err = 0;
-				FULONG umaID = 0;
 				
 				SQLLibrary *sqllib  = l->LibrarySQLGet( l );
 				if( sqllib != NULL )
@@ -234,8 +232,6 @@ Http *MobileWebRequest( void *m, char **urlpath, Http* request, UserSession *log
 						snprintf( query, sizeof(query), "DELETE from `FUserMobileApp` where DeviceID='%s' AND UserID=%lu", deviceID, uid );
 						sqllib->QueryWithoutResults( sqllib, query );
 					}
-					
-					DEBUG("UMAID: %lu\n", umaID );
 					
 					UserMobileApp *ma = UserMobileAppNew();
 					if( ma != NULL )
@@ -552,8 +548,7 @@ Http *MobileWebRequest( void *m, char **urlpath, Http* request, UserSession *log
 		char *platform = NULL;
 		char *version = NULL;
 		int status = -1;
-		FBOOL uappCreated = FALSE;
-		
+
 		DEBUG( "[MobileWebRequest] Create user mobile app!!\n" );
 		
 		HashmapElement *el = NULL;
@@ -743,8 +738,7 @@ Http *MobileWebRequest( void *m, char **urlpath, Http* request, UserSession *log
 		response = HttpNewSimple( HTTP_200_OK,  tags );
 		
 		FULONG uid = 0;
-		FBOOL uappCreated = FALSE;
-		
+
 		DEBUG( "[MobileWebRequest] Create user mobile app!!\n" );
 		
 		HashmapElement *el = NULL;
@@ -953,7 +947,6 @@ Http *MobileWebRequest( void *m, char **urlpath, Http* request, UserSession *log
 		
 		response = HttpNewSimple( HTTP_200_OK,  tags );
 		
-		FULONG uid = 0, umaid = 0;
 		int status = -1;
 		
 		DEBUG( "[MobileWebRequest] Update WS state!!\n" );
