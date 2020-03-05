@@ -1835,6 +1835,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 							{
 								// Hide overlay
 								ScreenOverlay.hide();
+								console.log( 'Hiding...' );
 							}
 						} );
 					}
@@ -8864,14 +8865,6 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 					}
 				}
 				l.execute( 'mobile/createuma', { sessionid: Workspace.sessionId, apptoken: appToken, deviceid: deviceID, appversion: version, platform: platform } );
-			}
-			
-			if( window.ScreenOverlay )
-			{
-				setTimeout( function()
-				{
-					window.ScreenOverlay.visibility = false;
-				}, 3000 );
 			}
 		}
 		return true;
