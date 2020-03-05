@@ -4896,10 +4896,10 @@ div.Orange, button.Orange
 	z-index: 999;
 }
 
-.EULA + #FriendScreenOverlay.Visible.Showing:after
+/*.EULA + #FriendScreenOverlay.Visible.Showing:after
 {
 	opacity: 0;
-}
+}*/
 
 #FriendScreenOverlay .EulaInfo
 {
