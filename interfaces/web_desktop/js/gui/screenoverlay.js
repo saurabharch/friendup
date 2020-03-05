@@ -26,8 +26,9 @@ var ScreenOverlay = {
 	// Show self
 	show: function()
 	{
+		console.log( 'EULA BEFORE SHOW' );
 		var self = this;
-		if( !this.div ) return;
+		if( this.visibility || !this.div ) return;
 		this.visibility = true;
 		this.div.classList.remove( 'Hidden' );
 		this.div.classList.add( 'Visible' );
@@ -39,6 +40,7 @@ var ScreenOverlay = {
 		{
 			this.enableDebug();
 		}
+		console.log( 'EULA SHOW' );
 	},
 	// Trick hide
 	invisible: function()
@@ -66,6 +68,7 @@ var ScreenOverlay = {
 	// Hide self
 	hide: function()
 	{
+		console.log( 'HIDE SCREEN OVERLAY' );
 		var self = this;
 		if( this.debug ) return;
 		if( this.eula )
@@ -81,8 +84,10 @@ var ScreenOverlay = {
 			}
 			m.forceHTTP = true;
 			m.execute( 'getsetting', { setting: 'eula_accepted' } );
+			console.log( 'EULA MODE' );
 			return;
 		}
+		console.log( 'HIDING SCREEN OVERLAY' );
 		function theHider()
 		{
 			if( !self.visibility ) return false;
