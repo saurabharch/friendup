@@ -86,7 +86,6 @@ var ScreenOverlay = {
 			m.forceHTTP = true;
 			m.execute( 'getsetting', { setting: 'eula_accepted' } );
 			console.log( 'EULA MODE' );
-			self.show( true );
 			return;
 		}
 		console.log( 'HIDING SCREEN OVERLAY' );
@@ -132,6 +131,7 @@ var ScreenOverlay = {
 	},
 	showEula: function()
 	{
+		this.show( true );
 		this.div.classList.add( 'EULA' );
 		var d = document.createElement( 'div' );
 		d.className = 'SmoothScrolling EULA Loading';
