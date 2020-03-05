@@ -85,17 +85,13 @@ var ScreenOverlay = {
 			}
 			m.forceHTTP = true;
 			m.execute( 'getsetting', { setting: 'eula_accepted' } );
-			console.log( 'EULA MODE' );
-			if( self.hidertime1 )
-				clearTimeout( self.hidertime1 );
-			if( self.hidertime2 )
-				clearTimeout( self.hidertime2 );
 			self.show( true );
 			return;
 		}
 		console.log( 'HIDING SCREEN OVERLAY' );
 		function theHider()
 		{
+			if( self.eula ) return false;
 			if( !self.visibility ) return false;
 			self.div.classList.add( 'Hiding' );
 			self.hidertime1 = setTimeout( function()
@@ -159,6 +155,7 @@ var ScreenOverlay = {
 			{
 				self.div.classList.remove( 'EULA' );
 				self.hide();
+				self.eula = false;
 			}
 		}
 		m.forceHTTP = true;
