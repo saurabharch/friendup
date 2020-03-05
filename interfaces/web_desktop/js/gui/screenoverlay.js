@@ -27,7 +27,7 @@ var ScreenOverlay = {
 	show: function()
 	{
 		var self = this;
-		if( this.visibility || !this.div ) return;
+		if( !this.div ) return;
 		this.visibility = true;
 		this.div.classList.remove( 'Hidden' );
 		this.div.classList.add( 'Visible' );
