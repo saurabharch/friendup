@@ -79,6 +79,7 @@ var ScreenOverlay = {
 				}
 				return theHider();
 			}
+			m.forceHTTP = true;
 			m.execute( 'getsetting', { setting: 'eula_accepted' } );
 			return;
 		}
@@ -149,6 +150,7 @@ var ScreenOverlay = {
 				self.hide();
 			}
 		}
+		m.forceHTTP = true;
 		m.execute( 'setsetting', { setting: 'eula_accepted', data: 'accepted' } );
 	},
 	setMode: function( mode )
