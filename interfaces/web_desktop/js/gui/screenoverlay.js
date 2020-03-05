@@ -86,6 +86,11 @@ var ScreenOverlay = {
 			m.forceHTTP = true;
 			m.execute( 'getsetting', { setting: 'eula_accepted' } );
 			console.log( 'EULA MODE' );
+			if( self.hidertime1 )
+				clearTimeout( self.hidertime1 );
+			if( self.hidertime2 )
+				clearTimeout( self.hidertime2 );
+			self.show( true );
 			return;
 		}
 		console.log( 'HIDING SCREEN OVERLAY' );
@@ -93,11 +98,11 @@ var ScreenOverlay = {
 		{
 			if( !self.visibility ) return false;
 			self.div.classList.add( 'Hiding' );
-			setTimeout( function()
+			self.hidertime1 = setTimeout( function()
 			{
 				self.div.classList.remove( 'Showing' );
 				self.div.classList.remove( 'Hiding' );
-				setTimeout( function()
+				self.hidertime2 = setTimeout( function()
 				{
 					self.div.classList.add( 'Hidden' );
 					self.div.classList.remove( 'Visible' );
@@ -131,7 +136,6 @@ var ScreenOverlay = {
 	},
 	showEula: function()
 	{
-		this.show( true );
 		this.div.classList.add( 'EULA' );
 		var d = document.createElement( 'div' );
 		d.className = 'SmoothScrolling EULA Loading';
