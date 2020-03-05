@@ -9683,6 +9683,7 @@ function ShowEula( accept, cbk )
 		{
 			if( e == 'ok' )
 			{
+				ge( 'FriendScreenOverlay' ).classList.remove( 'EULA' );
 				var eles = document.getElementsByTagName( 'div' );
 				for( var a = 0; a < eles.length; a++ )
 				{
@@ -9722,6 +9723,7 @@ function ShowEula( accept, cbk )
 	f.onLoad = function( data )
 	{
 		d.innerHTML = data;
+		ge( 'FriendScreenOverlay' ).classList.add( 'EULA' );
 	}
 	f.load();
 }

@@ -4896,6 +4896,11 @@ div.Orange, button.Orange
 	z-index: 999;
 }
 
+#FriendScreenOverlay.Visible.Showing.EULA:after
+{
+	opacity: 0;
+}
+
 #FriendScreenOverlay .EulaInfo
 {
 	margin-top: 30px;

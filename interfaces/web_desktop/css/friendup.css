@@ -220,11 +220,6 @@ body > .Eula > div.EulaInfo button + button
 	float: right;
 }
 
-.EULA + #FriendScreenOverlay.Visible.Showing:after
-{
-	opacity: 0;
-}
-
 /* Login stuff -------------------------------------------------------------- */
 
 html body.Login #Login .Resize, 
