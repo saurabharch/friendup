@@ -124,6 +124,7 @@ var ScreenOverlay = {
 	},
 	showEula: function()
 	{
+		this.div.classList.add( 'EULA' );
 		var d = document.createElement( 'div' );
 		d.className = 'SmoothScrolling EULA Loading';
 		this.div.appendChild( d );
@@ -144,6 +145,7 @@ var ScreenOverlay = {
 		{
 			if( e == 'ok' )
 			{
+				self.div.classList.remove( 'EULA' );
 				self.hide();
 			}
 		}
