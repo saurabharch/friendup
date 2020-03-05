@@ -24,11 +24,12 @@ var ScreenOverlay = {
 		document.body.appendChild( this.div );
 	},
 	// Show self
-	show: function()
+	show: function( force )
 	{
 		console.log( 'EULA BEFORE SHOW' );
 		var self = this;
-		if( this.visibility || !this.div ) return;
+		if( !force )
+			if( this.visibility || !this.div ) return;
 		this.visibility = true;
 		this.div.classList.remove( 'Hidden' );
 		this.div.classList.add( 'Visible' );
@@ -85,7 +86,7 @@ var ScreenOverlay = {
 			m.forceHTTP = true;
 			m.execute( 'getsetting', { setting: 'eula_accepted' } );
 			console.log( 'EULA MODE' );
-			self.show();
+			self.show( true );
 			return;
 		}
 		console.log( 'HIDING SCREEN OVERLAY' );
