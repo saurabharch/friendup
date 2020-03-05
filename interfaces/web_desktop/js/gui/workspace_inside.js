@@ -1827,6 +1827,13 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 										}
 										// We are done. Empty startup apps!
 										Friend.startupApps = {};
+										if( window.ScreenOverlay )
+										{
+											setTimeout( function()
+											{
+												window.ScreenOverlay.visibility = false;
+											}, 3000 );
+										}
 									}
 								}
 								l.func();
@@ -1835,7 +1842,6 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 							{
 								// Hide overlay
 								ScreenOverlay.hide();
-								console.log( 'Hiding...' );
 							}
 						} );
 					}
