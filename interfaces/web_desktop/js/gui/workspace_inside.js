@@ -410,7 +410,8 @@ var WorkspaceInside = {
 							
 							if( movableWindows[c].windowObject.workspace == this.ind )
 							{
-								if( movableWindows[c].getAttribute( 'minimized' ) != 'minimized' )
+								var pn = movableWindows[c].parentNode;
+								if( pn.getAttribute( 'minimized' ) != 'minimized' )
 								{
 									_ActivateWindow( movableWindows[c] );
 									break;
@@ -9572,7 +9573,7 @@ function AboutFriendUP()
 {
 	if( !Workspace.sessionId ) return;
 	var v = new View( {
-		title: i18n( 'about_system' ) + ' v1.2.0',
+		title: i18n( 'about_system' ) + ' v1.2.3',
 		width: 540,
 		height: 560,
 		id: 'about_friendup'
