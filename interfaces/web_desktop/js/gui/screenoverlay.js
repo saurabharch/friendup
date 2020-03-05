@@ -101,6 +101,7 @@ var ScreenOverlay = {
 		{
 			if( self.eula ) return false;
 			if( !self.visibility ) return false;
+			return;
 			self.div.classList.add( 'Hiding' );
 			self.hidertime1 = setTimeout( function()
 			{
