@@ -85,6 +85,7 @@ var ScreenOverlay = {
 			m.forceHTTP = true;
 			m.execute( 'getsetting', { setting: 'eula_accepted' } );
 			console.log( 'EULA MODE' );
+			self.show();
 			return;
 		}
 		console.log( 'HIDING SCREEN OVERLAY' );
