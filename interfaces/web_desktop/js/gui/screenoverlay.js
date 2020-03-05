@@ -74,6 +74,7 @@ var ScreenOverlay = {
 		if( this.debug ) return;
 		if( this.eula )
 		{
+			console.log( 'EULA exists.' );
 			var m = new Module( 'system' );
 			m.onExecuted = function( e, d )
 			{
