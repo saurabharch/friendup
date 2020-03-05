@@ -114,7 +114,7 @@ var ScreenOverlay = {
 							Workspace.applications[ a ].startupsequence = false;
 						}
 					}
-				}, 1000 );
+				}, 4000 );
 				
 				// Make sure we update screen title and tray/tasks
 				PollTaskbar();
