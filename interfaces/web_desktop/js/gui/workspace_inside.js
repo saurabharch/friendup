@@ -8867,7 +8867,12 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 			}
 			
 			if( window.ScreenOverlay )
-				window.ScreenOverlay.visibility = false;
+			{
+				setTimeout( function()
+				{
+					window.ScreenOverlay.visibility = false;
+				}, 1000 );
+			}
 		}
 		return true;
 	},
