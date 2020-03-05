@@ -69,12 +69,20 @@ var ScreenOverlay = {
 	// Hide self
 	hide: function()
 	{
-		console.log( 'HIDE SCREEN OVERLAY' );
 		var self = this;
 		if( this.debug ) return;
 		if( this.eula )
 		{
-			console.log( 'EULA exists.' );
+			if( self.hidertime1 )
+			{
+				clearTimeout( self.hidertime1 );
+				self.hidertime1 = null;
+			}
+			if( self.hidertime2 )
+			{
+				clearTimeout( self.hidertime2 );
+				self.hidertime2 = null;
+			}
 			var m = new Module( 'system' );
 			m.onExecuted = function( e, d )
 			{
@@ -89,7 +97,6 @@ var ScreenOverlay = {
 			self.show( true );
 			return;
 		}
-		console.log( 'HIDING SCREEN OVERLAY' );
 		function theHider()
 		{
 			if( self.eula ) return false;
