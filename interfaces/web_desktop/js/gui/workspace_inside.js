@@ -3100,6 +3100,10 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 										Workspace.onReady();
 									}
 									Workspace.updateViewState( 'active' );
+									
+									if( window.ScreenOverlay )
+										window.ScreenOverlay.visibility = false;
+									
 								}
 							}, 50 );
 						}
