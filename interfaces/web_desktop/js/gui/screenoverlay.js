@@ -48,7 +48,7 @@ var ScreenOverlay = {
 	{
 		if( this.debug ) return;
 		var self = this;
-		if( !this.visibility ) return;
+		if( !this.visibility || this.eula ) return;
 		this.div.classList.add( 'Hiding' );
 		setTimeout( function()
 		{
@@ -73,16 +73,6 @@ var ScreenOverlay = {
 		if( this.debug ) return;
 		if( this.eula )
 		{
-			if( self.hidertime1 )
-			{
-				clearTimeout( self.hidertime1 );
-				self.hidertime1 = null;
-			}
-			if( self.hidertime2 )
-			{
-				clearTimeout( self.hidertime2 );
-				self.hidertime2 = null;
-			}
 			var m = new Module( 'system' );
 			m.onExecuted = function( e, d )
 			{
@@ -99,9 +89,7 @@ var ScreenOverlay = {
 		}
 		function theHider()
 		{
-			if( self.eula ) return false;
 			if( !self.visibility ) return false;
-			return;
 			self.div.classList.add( 'Hiding' );
 			self.hidertime1 = setTimeout( function()
 			{
