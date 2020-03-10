@@ -410,7 +410,8 @@ var WorkspaceInside = {
 							
 							if( movableWindows[c].windowObject.workspace == this.ind )
 							{
-								if( movableWindows[c].getAttribute( 'minimized' ) != 'minimized' )
+								var pn = movableWindows[c].parentNode;
+								if( pn.getAttribute( 'minimized' ) != 'minimized' )
 								{
 									_ActivateWindow( movableWindows[c] );
 									break;
@@ -3618,7 +3619,13 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		// Check dormant
 		if( DormantMaster )
 		{
-			found = DormantMaster.getDoors();
+			var disks = DormantMaster.getDoors();
+			var found = [];
+			for( var a in disks )
+			{
+				if( disks[ a ].Filename != 'System:' ) found.push( disks[ a ] );
+			}
+			if( found.length <= 0 ) found = false;
 		}
 		var dom = false;
 
@@ -3667,6 +3674,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		var str = ''; var sw = 2;
 		for( var a = 0; a < found.length; a++ )
 		{
+			if( found[a].Filename == 'System:' ) continue;
 			sw = sw == 1 ? 2 : 1;
 			var dd = document.createElement( 'div' );
 			dd.className = 'sw' + sw;
@@ -4005,10 +4013,10 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 						hasNew = true;
 
 					// Something changed!
-					if( hasNew )
+					if( hasNew || forceRefresh )
 					{
 						t.icons = newIcons;
-						t.redrawIcons( forceRefresh );
+						t.redrawIcons();
 						if( checks.length )
 						{
 							for( var a = 0; a < checks.length; a++ )
@@ -4025,7 +4033,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 					}
 					else
 					{
-						if( forceRefresh ) t.redrawIcons( 1 );
+						if( forceRefresh ) t.redrawIcons();
 					}
 					
 					// Do the callback thing
@@ -4036,6 +4044,8 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 
 					// Check for new events
 					t.checkDesktopEvents();
+					
+					console.log( 'All: ' + ( forceRefresh ? 'force' : 'not' ), newIcons );
 				}
 				m.execute( 'device/list' );
 			}
@@ -8207,6 +8217,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 	//try to run a call and if does not get back display offline message....
 	checkServerConnectionHTTP: function()
 	{	
+		var self = this;
 		// Too early
 		if( !Workspace.postInitialized || !Workspace.sessionId || Workspace.reloginInProgress ) return;
 		if( window.ScreenOverlay && ScreenOverlay.visibility )
@@ -8243,6 +8254,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		m.forceSend = true;
 		m.cancelId = 'checkserverconnection';
 		
+		// This one is executed when we get a response from the server
 		m.onExecuted = function( e, d )
 		{
 			if( inactiveTimeout )
@@ -8254,16 +8266,15 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 				var js = JSON.parse( d );
 				if( js.code && ( parseInt( js.code ) == 11 || parseInt( js.code ) == 3 ) )
 				{
-					//console.log( 'The session has gone away! Relogin using login().' );
-					//Workspace.flushSession();
 					Workspace.relogin(); // Try login using local storage
 				}
 			}
 			catch( b )
 			{
-				console.log( 'I do not understand the result. Server may be down.', e, d, b );
-				if( Workspace.serverIsThere && e == null && d == null )
+				if( e == null && d == null )
+				{
 					Workspace.relogin();
+				}
 			}
 			
 			//console.log( 'Response from connection checker: ', e, d );
@@ -8665,6 +8676,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		// Don't update if not changed
 		if( this.currentViewState == newState )
 		{
+			// Starts sleep timeout again (five minutes without activity sleep)
 			this.sleepTimeout();
 			return;
 		}
@@ -8747,7 +8759,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 				}
 			}
 			// IMPORTANT:
-			// Sleep in 15 minutes
+			// Sleep in 5 minutes
 			if( this.sleepingTimeout )
 				clearTimeout( this.sleepingTimeout );
 			Workspace.sleeping = false;
@@ -8776,7 +8788,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 	sleepTimeout: function()
 	{
 		// IMPORTANT: Only for desktops!
-		// Sleep in 15 minutes
+		// Sleep in 5 minutes
 		if( !window.friendApp )
 		{
 			if( this.sleepingTimeout )
@@ -8863,6 +8875,110 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 			}
 		}
 		return true;
+	},
+	Tasklist: function( e )
+	{
+		if( this.taskw )
+		{
+			refreshTaskList();
+			return this.taskw.activate();
+		}
+		this.taskw = new View( {
+			title: i18n( 'i18n_manage_tasks' ),
+			width: 400,
+			height: 500
+		} );
+		this.taskw.onClose = function()
+		{
+			if( Workspace.taskw )
+			{
+				if( Workspace.taskw.int )
+				{
+					clearInterval( Workspace.taskw.int );
+					Workspace.taskw.int = null;
+				}
+			}
+			Workspace.taskw = null;
+		}
+		function refreshTaskList()
+		{
+			var listArea = ge( 'TasklistTasks' );
+			if( !listArea ) return;
+			var current = listArea.getElementsByClassName( 'ListTask' );
+			// Add new
+			var adders = [];
+			for( var a in Workspace.applications )
+			{
+				var tid = Workspace.applications[ a ].id;
+				found = false;
+				for( var b = 0; b < current.length; b++ )
+				{
+					if( current[ b ].getAttribute( 'TaskID' ) == tid )
+					{
+						found = true;
+						break;
+					}
+				}
+				if( !found )
+				{
+					adders.push( Workspace.applications[ a ] );
+				}
+			}
+			var sw = 2;
+			for( var a = 0; a < adders.length; a++ )
+			{
+				sw = sw == 1 ? 2 : 1;
+				var d = document.createElement( 'div' );
+				d.className = 'ListTask HRow Padding sw' + sw;
+				d.setAttribute( 'TaskID', adders[ a ].id )
+				d.innerHTML = '<div class="HContent80 FloatLeft">' + adders[ a ].applicationName + '</div>' +
+					'<div class="HContent20 FloatLeft TextRight">' +
+						'<span class="MousePointer IconSmall fa-remove" onclick="Workspace.killByTaskId(\'' + adders[a].id + '\')"> </span>' +
+					'</div></div>';
+				if( listArea.childNodes.length )
+					listArea.insertBefore( d, listArea.firstChild );
+				else listArea.appendChild( d );
+			}
+			// Remove non existent
+			var removers = [];
+			current = listArea.getElementsByClassName( 'ListTask' );
+			for( var a = 0; a < current.length; a++ )
+			{
+				var found = false;
+				for( var b in Workspace.applications )
+				{
+					if( current[ a ].getAttribute( 'TaskID' ) == Workspace.applications[ b ].id )
+					{
+						found = true;
+						break;
+					}
+				}
+				if( !found )
+				{
+					removers.push( current[ a ] );
+				}
+			}
+			for( var a = 0; a < removers.length; a++ )
+			{
+				listArea.removeChild( removers[ a ] );
+			}
+		}
+		this.taskw.int = setInterval( function()
+		{
+			refreshTaskList();
+		}, 500 );
+		this.taskw.setContent( '<div class="ContentFull ScrollArea List" id="TasklistTasks"></div>' );
+	},
+	killByTaskId: function( id )
+	{
+		var self = this;
+		for( var a in Workspace.applications )
+			if( Workspace.applications[ a ].id == id )
+				Workspace.applications[ a ].quit();
+		setTimeout( function()
+		{
+			self.Tasklist();
+		}, 250 );
 	}
 };
 
@@ -9465,7 +9581,7 @@ function AboutFriendUP()
 {
 	if( !Workspace.sessionId ) return;
 	var v = new View( {
-		title: i18n( 'about_system' ) + ' v1.2.0',
+		title: i18n( 'about_system' ) + ' v1.2.3',
 		width: 540,
 		height: 560,
 		id: 'about_friendup'

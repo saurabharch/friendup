@@ -88,7 +88,10 @@ function PollTray()
 		tray.tasks.poll = function()
 		{
 			var taskn = Workspace.applications.length;
-			this.innerHTML = '<div class="BubbleInfo"><div>' + taskn + ' ' + ( taskn == 1 ? i18n( 'i18n_task_running' ) : i18n( 'i18n_tasks_running' ) ) + '.</div></div>';
+			var edit = '';
+			if( taskn > 0 )
+				edit = '<p class="BorderTop PaddingTop"><button onmousedown="Workspace.Tasklist()" type="button" class="Button IconSmall fa-bar-chart"> ' + i18n( 'i18n_manage_tasks' ) + '</button></p>';
+			this.innerHTML = '<div class="BubbleInfo"><div><p class="Layout">' + taskn + ' ' + ( taskn == 1 ? i18n( 'i18n_task_running' ) : i18n( 'i18n_tasks_running' ) ) + '.</p>' + edit + '</div></div>';
 		}
 		tray.appendChild( tray.tasks );
 		
@@ -143,7 +146,18 @@ function PollTray()
 		{
 			tray.notifications.innerHTML = '';
 			tray.notificationPopup = null;
+			tray.notifications.num = null;
 		}
+		// Add numbers bubble
+		if( !tray.notifications.num && nots.length > 1 )
+		{
+			tray.notifications.num = document.createElement( 'span' );
+			tray.notifications.num.className = 'NumberOfNotifications';
+			tray.notifications.appendChild( tray.notifications.num );
+		}
+		if( tray.notifications.num )
+			tray.notifications.num.innerHTML = Workspace.notificationEvents.length;
+		// Done numbers bubble
 		
 		for( var a = 0; a < nots.length; a++ )
 		{
@@ -214,7 +228,15 @@ function PollTray()
 		
 		// On click to see all notifications!
 		tray.notifications.onclick = function( e )
-		{
+		{	
+			if( ge( 'Tray' ).notificationPopup && !ge( 'Tray' ).classList.contains( 'Blink' ) )
+			{
+				ge( 'Tray' ).notificationPopup.parentNode.removeChild( ge( 'Tray' ).notificationPopup );
+				ge( 'Tray' ).notificationPopup = null;
+				PollTray();
+				return;
+			}
+			
 			if( tray.notifications.timeout )
 			{
 				clearTimeout( tray.notifications.timeout );
@@ -308,12 +330,13 @@ function PollTray()
 						
 						h += GetElementHeight( d ) + 8;
 
-						if( GetElementTop( d ) + d.offsetHeight > window.innerHeight - 80 )
+						if( GetElementTop( d ) + d.offsetHeight > window.innerHeight - 160 )
 						{
 							break;
 						}						
 					}
 					
+					// Clear button
 					if( notties.length > 1 )
 					{
 						var remAll = document.createElement( 'div' );
@@ -326,6 +349,7 @@ function PollTray()
 						tray.notificationPopup.appendChild( remAll );
 						remAll.onmousedown = function( e )
 						{
+							tray.notificationPopup.innerHTML = '';
 							Workspace.notificationEvents = [];
 							PollTray();
 							cancelBubble( e );
@@ -342,6 +366,7 @@ function PollTray()
 						
 						remAll.style.top = 27 + h + 'px';
 					}
+					
 				}
 				// No notifications?
 				else 
@@ -363,6 +388,10 @@ function PollTray()
 	{
 		tray.notifications.className = 'Hidden';
 		tray.notifications.onclick = null;
+		
+		if( tray.notifications.num && tray.notifications.num.parentNode )
+			tray.notifications.removeChild( tray.notifications.num );
+		else tray.notifications.num = null;
 	}
 }
 
@@ -381,8 +410,24 @@ function AddNotificationEvent( evt )
 		( Math.random() * 999 ) 
 	).toString();
 	evt.uniqueId = uniqueId;
+	// Double check duplicates
+	if( evt.notificationId )
+		evt.externNotificationId = evt.notificationId;
+	if( evt.notificationId )
+	{
+		for( var b = 0; b < Workspace.notificationEvents.length; b++ )
+		{
+			if( !Workspace.notificationEvents[ b ].externNotificationId )
+				continue;
+			if( Workspace.notificationEvents[ b ].externNotificationId == evt.externNotificationId )
+			{
+				// Duplicate!
+				console.log( 'Duplicate notification id.' );
+				return;
+			}
+		}
+	}
 	Workspace.notificationEvents.push( evt );
-	console.log( 'Added notification event.', evt );
 	return uniqueId;
 }
 
@@ -429,7 +474,7 @@ function Notify( message, callback, clickcallback )
 	
 	// Not active?
 	if( Workspace.currentViewState != 'active' )
-	{
+	{	
 		// Use native app
 		if( window.friendApp )
 		{
@@ -438,6 +483,16 @@ function Notify( message, callback, clickcallback )
 		if( window.Notification )
 		{
 			mobileDebug( 'Showing desktop notification.' );
+			
+			// Add to history
+			AddNotificationEvent( {
+				title: message.title,
+				text: message.text,
+				seen: false,
+				time: ( new Date() ).getTime(),
+				showCallback: callback,
+				clickCallback: clickcallback
+			}, message.notificationId );
 			
 			// Desktop notifications
 			function showNotification()
@@ -483,6 +538,8 @@ function Notify( message, callback, clickcallback )
 					}
 				} );
 			}
+			
+			PollTray();
 			return;
 		}
 	}
@@ -499,7 +556,7 @@ function Notify( message, callback, clickcallback )
 		showCallback: callback,
 		clickCallback: clickcallback
 	};
-	var notificationId = AddNotificationEvent( nev );
+	var notificationId = AddNotificationEvent( nev, message.notificationId );
 
 	// On mobile, we always show the notification on the Workspace screen
 	if( isMobile )

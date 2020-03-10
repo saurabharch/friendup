@@ -2315,6 +2315,24 @@ html #Tray.Size16
 
 /* Some info from the tray */
 
+#Tray .NumberOfNotifications
+{
+	pointer-events: none;
+	position: absolute;
+	top: 6px;
+	left: 19px;
+	font-size: 65%;
+	color: white;
+	background: #C92918;
+	border-radius: 100%;
+	padding: 0;
+	border: 0;
+	line-height: 11px;
+	width: 11px;
+	height: 11px;
+	text-align: center;
+}
+
 .BubbleInfo, .PopInfo
 {
 	position: absolute;
@@ -2354,9 +2372,11 @@ html body .PopInfo + .BubbleInfo
 	border-bottom-width: 0;
 }
 
+#Tray .Hidden { display: none; }
+
 .TrayElement.Blink:before
 {
-	animation: blinking 1s infinite;
+	/*animation: blinking 1s infinite;*/
 }
 
 @keyframes blinking
@@ -2491,8 +2511,8 @@ html body[viewlist=dockedlist] #Statusbar #Tray > div.Hidden
 .TrayElement.Tasks:before
 {
 	font-family: fontawesome;
-	content: "\f022";
-	font-size: 135%;
+	content: "\f0ae";
+	font-size: 125%;
 	text-align: center;
 	line-height: 24px;
 }

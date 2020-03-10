@@ -533,11 +533,11 @@ void WSThread( void *d )
 		}
 		else
 		{
-			if( response != NULL )
-			{
-				Log( FLOG_INFO, "[WS] C. SysWebRequest took %f seconds, err: %d response: '%s'\n" , secs, response->errorCode, response->content );
-			}
-			else
+			//if( response != NULL )
+			//{
+				//Log( FLOG_INFO, "[WS] C. SysWebRequest took %f seconds, err: %d response: '%s'\n" , secs, response->errorCode, response->content );
+			//}
+			//else
 			{
 				Log( FLOG_INFO, "[WS] C. SysWebRequest took %f seconds\n" , secs );
 			}
@@ -866,21 +866,23 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 	INCREASE_WS_THREADS();
 	
 	char *in = NULL;
-	
-	if( tin != NULL && len > 0 )
-	{
-		DEBUG("Len: %lu\n", len );
-		if( ( in = FMalloc( len+128 ) ) != NULL )	// 16 should be ok
-		{
-			memcpy( in, tin, len );
-		}
-	}
 
 	//TK-1220 - sometimes there is junk at the end of the string.
 	//The string is not guaranteed to be null terminated where it supposed to.
 	char *c = in;
 	if ( reason == LWS_CALLBACK_RECEIVE && len>0)
 	{
+		// no need to allocate memory for other functions then RECEIVE
+		if( tin != NULL && len > 0 )
+		{
+			DEBUG("Len: %lu\n", len );
+			if( ( in = FMalloc( len+128 ) ) != NULL )	// 16 should be ok
+			{
+				memcpy( in, tin, len );
+				in[len ] = '\0';
+			}
+		}
+		
 		DEBUG("reason==receive and len>0\n");
 		// No in!
 		if( in == NULL )
@@ -896,7 +898,6 @@ int FC_Callback( struct lws *wsi, enum lws_callback_reasons reason, void *user, 
 			return 0;
 		}
 		DEBUG("set end to 0\n");
-		c[len ] = '\0';
 	}
 
 	DEBUG("before switch\n");
@@ -1203,20 +1204,20 @@ void ParseAndCallThread( void *d )
 	pthread_detach( pthread_self() );
 	InputMsg *im = (InputMsg *)d;
 	
-	//if( FRIEND_MUTEX_LOCK( &(im->im_FCD->wsc_Mutex) ) == 0 )
-	//{
-	//	im->im_FCD->wsc_InUseCounter++;
-	//	FRIEND_MUTEX_UNLOCK( &(im->im_FCD->wsc_Mutex) );
-	//}
+	if( FRIEND_MUTEX_LOCK( &(im->im_FCD->wsc_Mutex) ) == 0 )
+	{
+		im->im_FCD->wsc_InUseCounter++;
+		FRIEND_MUTEX_UNLOCK( &(im->im_FCD->wsc_Mutex) );
+	}
 	
 	DEBUG("[ParseAndCallThread] FCD %p\n", im->im_FCD );
 	ParseAndCall( im->im_FCD, im->im_Msg, im->im_Len );
 	
-	//if( FRIEND_MUTEX_LOCK( &(im->im_FCD->wsc_Mutex) ) == 0 )
-	//{
-	//	im->im_FCD->wsc_InUseCounter--;
-	//	FRIEND_MUTEX_UNLOCK( &(im->im_FCD->wsc_Mutex) );
-	//}
+	if( FRIEND_MUTEX_LOCK( &(im->im_FCD->wsc_Mutex) ) == 0 )
+	{
+		im->im_FCD->wsc_InUseCounter--;
+		FRIEND_MUTEX_UNLOCK( &(im->im_FCD->wsc_Mutex) );
+	}
 	
 	if( im != NULL )
 	{
