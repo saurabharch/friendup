@@ -185,8 +185,13 @@ then
 					if [ $option = 1 ]; then
 						#database name, login, password, dbname
 						#comarray+=("mysqldump -u ${farray[1]} -p${farray[2]} --databases ${farray[3]} > ${current_backup_dir}/db/${farray[0]}.sql")
-						echo "mysqldump -u ${farray[1]} -p${farray[2]} --databases ${farray[3]} > ${current_backup_dir}/db/${farray[0]}.sql"
-						mysqldump -u ${farray[1]} -p${farray[2]} --databases ${farray[3]} > ${current_backup_dir}/db/${farray[0]}.sql
+						if [ ${farray[0]} = "all" ] && [ ${farray[1]} = "all" ] && [ ${farray[2]} = "all" ] && [ ${farray[3]} = "all" ]; then
+							echo "mysqldump -uroot --all-databases > ${current_backup_dir}/db/${farray[0]}.sql"
+							mysqldump -uroot --all-databases > ${current_backup_dir}/db/${farray[0]}.sql
+						else						
+							echo "mysqldump -u ${farray[1]} -p${farray[2]} --databases ${farray[3]} > ${current_backup_dir}/db/${farray[0]}.sql"
+							mysqldump -u ${farray[1]} -p${farray[2]} --databases ${farray[3]} > ${current_backup_dir}/db/${farray[0]}.sql
+						fi
 					elif [ $option = 2 ]; then
 						#echo "Line: ${farray[0]}"
 						#directories name, path
