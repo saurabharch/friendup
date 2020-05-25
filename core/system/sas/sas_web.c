@@ -347,10 +347,23 @@ Application.checkDocumentSession = function( sasID = null )
 							
 							DEBUG("SASWeb Add session: %d\n", err );
 							
+							SASUList *entry;
+							DEBUG("[SASWebRequest] I will try to add session\n");
+					
 							if( err == 0 )
 							{
-								int size = sprintf( buffer, "{\"SASID\":\"%lu\",\"type\":%d}", as->sas_SASID, as->sas_Type );
-								HttpAddTextContent( response, buffer );
+								if( ( entry = SASSessionAddCurrentUserSession( as, loggedSession) ) != NULL )
+								{
+									int size = sprintf( buffer, "{\"SASID\":\"%lu\",\"type\":%d}", as->sas_SASID, as->sas_Type );
+									HttpAddTextContent( response, buffer );
+								}
+								else
+								{
+									DEBUG("SASWeb Cannot join session\n");
+									char dictmsgbuf[ 256 ];
+									snprintf( dictmsgbuf, sizeof(dictmsgbuf), "{\"response\":\"%s\",\"code\":\"%d\"}", l->sl_Dictionary->d_Msg[DICT_CANNOT_CREATE_SAS], DICT_CANNOT_CREATE_SAS );
+									HttpAddTextContent( response, dictmsgbuf );
+								}
 							}
 							else
 							{
