@@ -8474,6 +8474,7 @@ GuiDesklet = function()
 			accept.path = self.regPath;
 			accept.data.authId = Application.authId;
 			accept.data.force = self.forceid;
+			if( self.sessiontype ) accept.data.type = self.sessiontype;
 			console.log('open session change path for our acceptance to register ourselves' + self.regPath)
 		}
 		
