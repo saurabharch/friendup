@@ -400,6 +400,7 @@ Application.checkDocumentSession = function( sasID = null )
 					
 						if( ( entry = SASSessionAddCurrentUserSession( as, loggedSession) ) != NULL )
 						{
+							strcpy( entry->authid, authid );
 							char tmpmsg[ 255 ];
 							int msgsize = snprintf( tmpmsg, sizeof( tmpmsg ), "{\"type\":\"client-accept\",\"data\":\"%s\"}", loggedSession->us_User->u_Name );
 							HttpAddTextContent( response, tmpmsg );
