@@ -348,7 +348,7 @@ Application.checkDocumentSession = function( sasID = null )
 							DEBUG("SASWeb Add session: %d\n", err );
 							
 							SASUList *entry;
-							DEBUG("[SASWebRequest] I will try to add session\n");
+							DEBUG("[SASWebRequest] I will try to add session: %s\n", authid );
 					
 							if( err == 0 )
 							{
