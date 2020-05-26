@@ -137,7 +137,10 @@ char *GetArgsAndReplaceSession( Http *request, UserSession *loggedSession, FBOOL
 		}
 		else
 		{
-			sprintf( allArgs, "%s", request->http_Uri->uri_QueryRaw );
+			if( request->http_Uri != NULL )
+			{
+				sprintf( allArgs, "%s", request->http_Uri->uri_QueryRaw );
+			}
 		}
 	
 		// application/json are used to communicate with another tools like onlyoffce
