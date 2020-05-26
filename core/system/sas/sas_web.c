@@ -354,6 +354,7 @@ Application.checkDocumentSession = function( sasID = null )
 							{
 								if( ( entry = SASSessionAddCurrentUserSession( as, loggedSession) ) != NULL )
 								{
+									strcpy( entry->authid, authid );
 									int size = sprintf( buffer, "{\"SASID\":\"%lu\",\"type\":%d}", as->sas_SASID, as->sas_Type );
 									HttpAddTextContent( response, buffer );
 								}
