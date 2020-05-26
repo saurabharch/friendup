@@ -1809,10 +1809,10 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 									UserSession *s = fcd->wsc_UserSession;
 									if( s != NULL )
 									{
-										DEBUG("[WS] Session ptr %p  session %p\n", s, s->us_SessionID );
+										//DEBUG("[WS] Session ptr %p  session %p\n", s, s->us_SessionID );
 										if( HashmapPut( http->http_ParsedPostContent, StringDuplicate( "sessionid" ), StringDuplicate( s->us_SessionID ) ) == MAP_OK )
 										{
-											DEBUG1("[WS] New values passed to POST %s\n", s->us_SessionID );
+											//DEBUG1("[WS] New values passed to POST %s\n", s->us_SessionID );
 										}
 									
 										int i, i1;
@@ -1900,7 +1900,7 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 													{
 														if( HashmapPut( http->http_ParsedPostContent, StringDuplicateN( in + t[ i ].start, t[i].end-t[i].start ), StringDuplicateN( in + t[i1].start, t[i1].end-t[i1].start ) ) == MAP_OK )
 														{
-															DEBUG1("[WS] New values passed to POST %.*s %.*s\n", (int)(t[i].end-t[i].start), (char *)(in + t[i].start), (int)(t[i1].end-t[i1].start), (char *)(in + t[ i1 ].start) );
+															//DEBUG1("[WS] New values passed to POST %.*s %.*s\n", (int)(t[i].end-t[i].start), (char *)(in + t[i].start), (int)(t[i1].end-t[i1].start), (char *)(in + t[ i1 ].start) );
 														}
 													
 														if( t[ i1 ].type == JSMN_ARRAY || t[ i1 ].type == JSMN_OBJECT )
@@ -1908,13 +1908,13 @@ int ParseAndCall( WSCData *fcd, char *in, size_t len )
 															int z=0;
 															if( t[ i1 ].type == JSMN_ARRAY )
 															{
-																DEBUG("[WS] Next  entry is array %d\n", t[ i1 ].size );
+																//DEBUG("[WS] Next  entry is array %d\n", t[ i1 ].size );
 																i += t[ i1 ].size;
 															}
 														
 															i++;
 															//
-															DEBUG1("[WS] current %d skip %d next %d\n", t[ i ].size-1, t[ i1 ].size-1, t[ i1+1 ].size );
+															//DEBUG1("[WS] current %d skip %d next %d\n", t[ i ].size-1, t[ i1 ].size-1, t[ i1+1 ].size );
 														}
 														else
 														{
