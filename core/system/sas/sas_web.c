@@ -368,11 +368,20 @@ Application.checkDocumentSession = function( sasID = null )
 							}
 							else
 							{
-								char dictmsgbuf[ 256 ];
-								char dictmsgbuf1[ 196 ];
-								snprintf( dictmsgbuf1, sizeof(dictmsgbuf1), l->sl_Dictionary->d_Msg[DICT_FUNCTION_RETURNED], "SAS register", err );
-								snprintf( dictmsgbuf, sizeof(dictmsgbuf), "{\"response\":\"%s\",\"code\":\"%d\"}", dictmsgbuf1 , DICT_FUNCTION_RETURNED );
-								HttpAddTextContent( response, dictmsgbuf );
+								if( ( entry = SASSessionAddCurrentUserSession( as, loggedSession) ) != NULL )
+								{
+									strcpy( entry->authid, authid );
+									int size = sprintf( buffer, "{\"SASID\":\"%lu\",\"type\":%d}", as->sas_SASID, as->sas_Type );
+									HttpAddTextContent( response, buffer );
+								}
+								else
+								{
+									char dictmsgbuf[ 256 ];
+									char dictmsgbuf1[ 196 ];
+									snprintf( dictmsgbuf1, sizeof(dictmsgbuf1), l->sl_Dictionary->d_Msg[DICT_FUNCTION_RETURNED], "SAS register", err );
+									snprintf( dictmsgbuf, sizeof(dictmsgbuf), "{\"response\":\"%s\",\"code\":\"%d\"}", dictmsgbuf1 , DICT_FUNCTION_RETURNED );
+									HttpAddTextContent( response, dictmsgbuf );
+								}
 							}
 						}
 						else
