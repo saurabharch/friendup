@@ -1238,10 +1238,10 @@ int SASSessionSendMessage( SASSession *as, UserSession *sender, char *msg, int l
 					if( ali->usersession != NULL )
 					{
 						msgsndsize += WebSocketSendMessageInt( ali->usersession, newmsg, newmsgsize );
-						if( ali->usersession != NULL && ali->usersession->us_User != NULL )
-						{
-							DEBUG("[SASSessionSendMessage] FROM %s  TO %s  MESSAGE SIZE %d\n", usend->u_Name, ali->usersession->us_User->u_Name, msgsndsize );
-						}
+						//if( ali->usersession != NULL && ali->usersession->us_User != NULL )
+						//{
+						//	DEBUG("[SASSessionSendMessage] FROM %s  TO %s  MESSAGE SIZE %d\n", usend->u_Name, ali->usersession->us_User->u_Name, msgsndsize );
+						//}
 					}
 					FFree( newmsg );
 				}
