@@ -509,7 +509,6 @@ SASUList *SASSessionAddCurrentUserSession( SASSession *as, UserSession *loggedSe
 	memset( upositions, 0, sizeof( upositions ) );
 	SASUList *retListEntry = NULL;
 	SystemBase *l = (SystemBase *)as->sas_SB;
-	
 	UserSession *usrses = NULL;
 
 	//
