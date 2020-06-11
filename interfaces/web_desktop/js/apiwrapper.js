@@ -1934,6 +1934,11 @@ function apiWrapper( event, force )
 					return;
 				}
 				
+				const now = new Date();
+				console.log( 'to native view', {
+					time : now.toLocaleTimeString(),
+					data : msg.data,
+				});
 				const nve = JSON.stringify( msg.data );
 				window.friendApp.receiveLive( msg.viewId, nve );
 				
