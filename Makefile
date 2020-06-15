@@ -179,7 +179,7 @@ install:
 	rsync -ravl php $(FRIEND_PATH)/
 	rsync -ravl modules $(FRIEND_PATH)/
 	rsync -ravl storage $(FRIEND_PATH)/
-	rsync -ravl db/sqlupdatescripts $(FRIEND_PATH)/
+	rsync -ravlt db/sqlupdatescripts $(FRIEND_PATH)/
 	rsync -ravl devices/* $(FRIEND_PATH)/devices/
 	rsync -ravl services/* $(FRIEND_PATH)/services/
 

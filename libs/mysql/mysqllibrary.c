@@ -1152,15 +1152,27 @@ int QueryWithoutResults( struct SQLLibrary *l, const char *sel )
 			if( err != 0 )
 			{
 				const char *errstr = mysql_error( l->con.sql_Con );
+				if( errstr != NULL )
+				{
+					if( l->l_LastError != NULL ) FFree( l->l_LastError );
+					l->l_LastError = FCalloc( strlen( errstr ) + 16, sizeof(char) );
+					strcpy( l->l_LastError, errstr );
+				}
 				
 				FERROR("mysql_execute failed  SQL: %s error: %s\n", sel, errstr );
 				if( strstr( errstr, "List connection to MySQL server" ) != NULL )
 				{
 					l->con.sql_Recconect = TRUE;
+				// This columns are already in database. There is no need to report a bug
 				}else if( strstr( errstr, "Duplicate column name " ) != NULL )
 				{
 					return 0;
+				}else if( strstr( errstr, "Duplicate key name " ) != NULL )
+				{
+					return 0;
 				}
+				
+				return -1;
 			}
 			else
 			{
@@ -1960,6 +1972,7 @@ int Disconnect( struct SQLLibrary *l )
 	if( l->con.sql_DBName != NULL ){ FFree( l->con.sql_DBName );  l->con.sql_DBName = NULL; }
 	if( l->con.sql_User != NULL ){ FFree( l->con.sql_User );  l->con.sql_User = NULL; }
 	if( l->con.sql_Pass != NULL ){ FFree( l->con.sql_Pass );  l->con.sql_Pass = NULL; }
+	if( l->l_LastError != NULL ){ FFree( l->l_LastError ); }
 	
 	mysql_close( l->con.sql_Con );
 	return 0;
