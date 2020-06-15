@@ -1927,6 +1927,17 @@ function apiWrapper( event, force )
 					}
 				}
 				break;
+			// Native view ( mobile app / ios ) --------------------------------------------
+			case 'native-view':
+				if ( !window.friendApp ) {
+					console.log( 'apiWrapper - native-view event, no friendApp', msg );
+					return;
+				}
+				
+				const nve = JSON.stringify( msg.data );
+				window.friendApp.receiveLive( msg.viewId, nve );
+				
+				break;
 			// Widget ---------------------------------------------------------
 			case 'widget':
 				var widgetId = msg.widgetId;
@@ -2087,7 +2098,8 @@ function apiWrapper( event, force )
 				// Perhaps do error?
 				if( msg.data.path && msg.data.path.toLowerCase && msg.data.path.toLowerCase().substr( 0, 8 ) != 'progdir:' && msg.data.path.indexOf( ':' ) > 0 )
 				{
-					if( !checkAppPermission( app.authId, 'Door Local' ) )
+					// TODO: Clean up "Door Local" which is deprecated
+					if( !checkAppPermission( app.authId, 'Door Local' ) && !checkAppPermission( app.authId, 'Door All' ) )
 					{
 						console.log( 'Permission denied to local filesystems!' );
 						return false;
@@ -4210,6 +4222,7 @@ function checkAppPermission( authid, permission, value )
 		if( eles[a].authId == authid )
 		{
 			// JSX apps have all rights..
+			// TODO: Box down with security!
 			if( eles[a].applicationType && eles[a].applicationType == 'jsx' )
 				return true;
 

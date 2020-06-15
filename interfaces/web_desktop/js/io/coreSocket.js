@@ -49,6 +49,8 @@ FriendWebSocket = function( conf )
 	self.allowReconnect = true;
 	self.pingInterval = 1000 * 10;
 	self.maxPingWait = 1000 * 5;
+	//self.pingInterval = 1000 * 40;
+	//self.maxPingWait = 1000 * 30;
 	self.pingCheck = 0;
 	self.reconnectDelay = 200; // ms
 	self.reconnectMaxDelay = 1000 * 30; // 30 sec max delay between reconnect attempts
@@ -237,7 +239,7 @@ FriendWebSocket.prototype.doReconnect = function()
 	if ( delay > self.reconnectMaxDelay )
 		delay = self.reconnectMaxDelay;
 	
-	console.log( 'prepare reconnect - delay( s )', ( delay / 1000 ));
+	//console.log( 'prepare reconnect - delay( s )', ( delay / 1000 ));
 	var showReconnectLogTimeLimit = 5000; // 5 seconds
 	if ( delay > showReconnectLogTimeLimit )
 		self.setState( 'reconnect', delay );

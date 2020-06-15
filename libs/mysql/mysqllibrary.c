@@ -588,9 +588,24 @@ int Update( struct SQLLibrary *l, FULONG *descr, void *data )
 	
 	if( mysql_query( l->con.sql_Con, querybs->bs_Buffer ) )
 	{
-		FERROR("Query error!\n");
+		
+		SystemBase *sb = (SystemBase *)l->sb;
+		const char *err = NULL;
+		err = mysql_error( l->con.sql_Con );
+		
+		sb->sl_UtilInterface.Log( FLOG_ERROR, "Update query error: %s, query: %s\n", err, querybs->bs_Buffer );
+
 		BufStringDelete( querybs );
 		
+		if( l->l_LastError != NULL )
+		{
+			FFree( l->l_LastError );
+		}
+		if( err != NULL )
+		{
+			l->l_LastError = FMalloc( strlen( err )+16 );
+			strcpy( l->l_LastError, err );
+		}
 		return 2;
 	}
 	BufStringDelete( querybs );
@@ -821,32 +836,50 @@ int Save( struct SQLLibrary *l, const FULONG *descr, void *data )
 		// end of if( statement init)
 	
 		int finalqsize = tablequerybs->bs_Size + dataquerybs->bs_Size + 256;
+		SystemBase *sb = (SystemBase *)l->sb;
 		
 		if( ( finalQuery = FCalloc( finalqsize, sizeof(char) ) ) != NULL )
 		{
-			
 			sprintf( finalQuery, "INSERT INTO %s ( %s ) VALUES( %s )", (char *)descr[ 1 ], tablequerybs->bs_Buffer, dataquerybs->bs_Buffer );
 
 			if (mysql_stmt_prepare(stmt, finalQuery, strlen(finalQuery)))
 			{
-				FERROR( "\n mysql_stmt_prepare(), INSERT failed");
-				FERROR( "\n %s", mysql_stmt_error(stmt));
+				const char *err = mysql_stmt_error(stmt);
+				
+				sb->sl_UtilInterface.Log( FLOG_ERROR,  "\n mysql_stmt_prepare(), INSERT failed");
+				sb->sl_UtilInterface.Log( FLOG_ERROR,  "\n %s", err );
 				mysql_stmt_close( stmt ); // Free
 				BufStringDelete( tablequerybs );
 				BufStringDelete( dataquerybs );
 				FFree( finalQuery );
+				
+				if( l->l_LastError != NULL )
+				{
+					FFree( l->l_LastError );
+				}
+				l->l_LastError = FMalloc( strlen( err )+16 );
+				strcpy( l->l_LastError, err );
 				return 3;
 			}
 	
 			// Bind the buffers 
 			if (mysql_stmt_bind_param( stmt, bindTable ) )
 			{
-				FERROR("param bind failed! ");
-				FERROR(" %s\n", mysql_stmt_error(stmt) );
+				const char *err = mysql_stmt_error(stmt);
+				
+				sb->sl_UtilInterface.Log( FLOG_ERROR, "param bind failed! ");
+				sb->sl_UtilInterface.Log( FLOG_ERROR, " %s\n", err );
 				mysql_stmt_close( stmt ); // Free
 				BufStringDelete( tablequerybs );
 				BufStringDelete( dataquerybs );
 				FFree( finalQuery );
+				
+				if( l->l_LastError != NULL )
+				{
+					FFree( l->l_LastError );
+				}
+				l->l_LastError = FMalloc( strlen( err )+16 );
+				strcpy( l->l_LastError, err );
 				return 1;
 			}
 
@@ -859,7 +892,14 @@ int Save( struct SQLLibrary *l, const FULONG *descr, void *data )
 					// Supply data in chunks to server 
 					if (mysql_stmt_send_long_data(stmt, i, bindData[ i ]->ls_Data , bindData[ i ]->ls_Size ) )
 					{
-						FERROR( " send_long_data failed %s\n", mysql_stmt_error(stmt));
+						const char *err = mysql_stmt_error(stmt);
+						sb->sl_UtilInterface.Log( FLOG_ERROR," send_long_data failed %s\n", err);
+						if( l->l_LastError != NULL )
+						{
+							FFree( l->l_LastError );
+						}
+						l->l_LastError = FMalloc( strlen( err )+16 );
+						strcpy( l->l_LastError, err );
 					}
 				}
 			}
@@ -867,7 +907,14 @@ int Save( struct SQLLibrary *l, const FULONG *descr, void *data )
 			// Now, execute the query 
 			if ( mysql_stmt_execute(stmt) )
 			{
-				FERROR("mysql_stmt_execute failed %s\n", mysql_stmt_error(stmt));
+				const char *err = mysql_stmt_error(stmt);
+				sb->sl_UtilInterface.Log( FLOG_ERROR, "Save query error: %s, query: %s\n", err, finalQuery );
+				if( l->l_LastError != NULL )
+				{
+					FFree( l->l_LastError );
+				}
+				l->l_LastError = FMalloc( strlen( err )+16 );
+				strcpy( l->l_LastError, err );
 				retValue = 1;
 			}
 		
@@ -2009,6 +2056,7 @@ void *libInit( void *sb )
 		return NULL;
 	}
 
+	l->sb = sb;
 	l->l_Name = LIB_NAME;
 	l->l_Version = LIB_VERSION;
 	

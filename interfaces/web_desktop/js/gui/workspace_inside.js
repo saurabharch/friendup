@@ -373,7 +373,7 @@ var WorkspaceInside = {
 				var wp = document.createElement( 'wp' );
 				var d = document.createElement( 'div' )
 				d.className = 'VirtualWorkspaces';
-				for( var a = 0; a < globalConfig.workspacecount; a++ )
+				for( let a = 0; a < globalConfig.workspacecount; a++ )
 				{
 					var w = document.createElement( 'div' );
 					w.className = 'Workspace';
@@ -384,7 +384,7 @@ var WorkspaceInside = {
 							// Create a text representing the content in the virtual workspace
 							var apps = {};
 							var str = '';
-							for( var a in movableWindows )
+							for( let a in movableWindows )
 							{
 								if( movableWindows[ a ].windowObject.workspace == num )
 								{
@@ -406,13 +406,21 @@ var WorkspaceInside = {
 								}
 							}
 							var o = '';
-							for( var a in apps )
+							for( let a in apps )
 								o += ( apps[ a ].string + ( apps[ a ].count > 1 ? ( ' (' + apps[ a ].count + ')' ) : '' ) ) + "\n";
 							return o + str;
 						} } );
 					} )( a );
 					if( a == globalConfig.workspaceCurrent ) w.className += ' Active';
-					if( globalConfig.workspace_labels && globalConfig.workspace_labels[ a ] && typeof( globalConfig.workspace_labels ) == 'object' )
+					
+					// Check if the label is an icon or a number
+					if( 
+						globalConfig.workspace_labels && 
+						typeof( globalConfig.workspace_labels ) == 'object' && 
+						globalConfig.workspace_labels[ a ] && 
+						globalConfig.workspace_labels[ a ] != '[' &&
+						globalConfig.workspace_labels[ a ] != ']'
+					)
 					{
 						w.innerHTML = '<span class="' + globalConfig.workspace_labels[ a ] + '"></span>';
 						w.className += ' WithIcon';
@@ -445,18 +453,33 @@ var WorkspaceInside = {
 						ge( 'DoorsScreen' ).screenObject.contentDiv.style.left = '-' + 100 * this.ind + '%';
 						
 						_DeactivateWindows();
-						// Activate next window on next screen
-						for( var c in movableWindows )
+						
+						// Check if we have a preset window that should be activated
+						var foundActive = false;
+						if( typeof( virtualWorkspaces[ this.ind ] ) != 'undefined' )
 						{
-							if( !movableWindows[c].windowObject ) continue;
-							
-							if( movableWindows[c].windowObject.workspace == this.ind )
+							if( virtualWorkspaces[ this.ind ].activeWindow )
 							{
-								var pn = movableWindows[c].parentNode;
-								if( pn.getAttribute( 'minimized' ) != 'minimized' )
+								_ActivateWindow( virtualWorkspaces[ this.ind ].activeWindow );
+								foundActive = true;
+							}
+						}
+						
+						// Activate next window on next screen
+						if( !foundActive )
+						{
+							for( var c in movableWindows )
+							{
+								if( !movableWindows[c].windowObject ) continue;
+							
+								if( movableWindows[c].windowObject.workspace == this.ind )
 								{
-									_ActivateWindow( movableWindows[c] );
-									break;
+									var pn = movableWindows[c].parentNode;
+									if( pn.getAttribute( 'minimized' ) != 'minimized' )
+									{
+										_ActivateWindow( movableWindows[c] );
+										break;
+									}
 								}
 							}
 						}
@@ -3818,322 +3841,354 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		// Get the mountlist
 		function doGetMountlistHere()
 		{
-			var mo = new Module( 'system' );
+			let mo = new Module( 'system' );
 			mo.onExecuted = function( returnCode, shortcuts )
 			{
-				var m = new Library( 'system.library' )
-				m.onExecuted = function( e, dat )
+				let vi = new Module( 'system' );
+				vi.onExecuted = function( rco, visList )
 				{
-					// New icons to list
-					var newIcons = [];
-					
-					// Add system on top (after Ram: if it exists)
-					newIcons.push( {
-						Title:	   'System',
-						Volume:    'System:',
-						Path:	   'System:',
-						Type:	   'Door',
-						Handler:   'built-in',
-						Driver:    'Dormant',
-						MetaType:  'Directory',
-						IconClass: 'SystemDisk',
-						ID:	       'system', // TODO: fix
-						Mounted:   true,
-						Visible:   globalConfig.hiddenSystem == true ? false : true,
-						Door:	   Friend.DoorSystem
-					} );
-				
-					// Did we get a new list of disks from the server?
-					if( returnCode == 'ok' )
+					let visStruct = null;
+					if( rco == 'ok' )
 					{
-						// Check shortcuts and add them to the desktop
-						var shorts = JSON.parse( shortcuts );
-						for( var a = 0; a < shorts.length; a++ )
+						try
 						{
-							if( !shorts[ a ] )
-							{
-								continue;
-							}
-							
-							if( shorts[ a ].substr( 0, 16 ) == 'DesktopShortcut:' )
-							{
-								var path = shorts[ a ].substr( 16, shorts[ a ].length - 16 );
-								var ind = path.indexOf( ':' );
-								var num = StrPad( path.substr( 0, ind ), 10, '0' );
-								path = path.substr( ind + 1, path.length - ( ind + 1 ) );
-								
-
-								// Link to a repository?
-								var iconFile = '';
-								if( path.substr( -11, 11 ) == ':repository' )
-								{
-									path = path.substr( 0, path.length - 11 );
-									iconFile = '/system.library/module/?module=system&command=repoappimage&i=' + GetFilename( path ) + '&sessionid=' + Workspace.sessionId;
-								}
-								
-								var fn = GetFilename( path );
-								
-								newIcons.push( {
-									Title: fn,
-									Filename: path,
-									Path: path,
-									IconFile: iconFile,
-									Type: path.substr( path.length - 1, 1 ) == '/' ? 'Directory' : 'File',
-									SortPriority: num,
-									Handler: 'built-in',
-									MetaType: 'Shortcut',
-									Visible: true
-								} );
-							}
-							else
-							{
-								var pair = shorts[a].split( ':' );
-								// Shift camelcase
-								var literal = '';
-								for( var c = 0; c < pair[0].length; c++ )
-								{
-									if( c > 0 && pair[0].charAt(c).toUpperCase() == pair[0].charAt(c) )
-									{
-										literal += ' ';
-									}
-									literal += pair[0].charAt( c );
-								}
-						
-								// Add custom icon
-								newIcons.push( {
-									Title: literal,
-									Filename: pair[0],
-									Type: 'Executable',
-									IconFile: '/' + pair[1],
-									Handler: 'built-in',
-									Driver: 'Shortcut',
-									MetaType: 'ExecutableShortcut',
-									SortPriority: 0,
-									ID: shorts[a].toLowerCase(),
-									Mounted: true,
-									Visible: true,
-									IconClass: literal.split( ' ' ).join( '_' ),
-									Door: 'executable'
-								} );
-							}
+							let tmp = JSON.parse( visList );
+							visStruct = {};
+							for( let z = 0; z < tmp.length; z++ )
+								visStruct[ tmp[ z ].Filesystem ] = tmp[ z ];
 						}
-					}
-
-					// Add DormantDrives to the list (automount)
-					var dormantDoors = DormantMaster.getDoors();
-					for ( var d = 0; d < dormantDoors.length; d++ )
-					{
-						var dormantDoor = dormantDoors[ d ];
-						if ( dormantDoor.AutoMount )
+						catch( e )
 						{
-							newIcons.push( 
-							{
-								Title: dormantDoor.Title,
-								Volume: dormantDoor.Volume,
-								Path: dormantDoor.Path,
-								Type: dormantDoor.Type,
-								Handler: dormantDoor.Handler,
-								Driver: dormantDoor.Drive,
-								MetaType: dormantDoor.MetaType,
-								IconClass: 'SystemDisk',
-								SortPriotity: 0,
-								ID: 'local', // TODO: fix
-								Mounted:  true,
-								Visible: true,
-								Door: dormantDoor,
-								Dormant: dormantDoor.Dormant
-							} );						
-						}
-					}
-
-					// Redraw icons when tested for disk info
-					function testDrive( o, d )
-					{
-						if( !d ) return;
-						
-						// Check disk info
-						if( d.dosAction )
-						{
-							d.dosAction( 'info', { path: o.Volume + 'disk.info' }, function( io )
-							{
-								var res = io.split( '<!--separate-->' );
-								if( res[0] == 'ok' )
-								{
-									var response = false;
-									try
-									{
-										response = JSON.parse( res[1] );
-									}
-									catch( k ){};
-									if( !response || ( response && response.response == 'File or directory do not exist' ) ) return;
-								
-									var fl = new File( o.Volume + 'disk.info' );
-									fl.onLoad = function( data )
-									{
-										if( data.indexOf( '{' ) >= 0 )
-										{
-											try
-											{
-												var dt = JSON.parse( data );
-												if( dt && dt.DiskIcon )
-												{
-													o.IconFile = getImageUrl( o.Volume + dt.DiskIcon );
-													t.redrawIcons();
-												}
-											}
-											catch( e ){}
-										}
-									}
-									fl.load();
-								}
-							} );
-						}
-					}
-
-					// Friend disks
-					var rows;
-					try
-					{
-						rows = JSON.parse( dat );
-					}
-					catch( e )
-					{
-						rows = false;
-					}
-					
-					// Check the friend disks
-					if( rows && rows.length )
-					{
-						for ( var a = 0; a < rows.length; a++ )
-						{
-							var r = rows[a];
-							if( r.Config.indexOf( '{' ) >= 0 )
-							{
-								try
-								{
-									r.Config = JSON.parse( r.Config );
-								}
-								catch( e )
-								{
-									console.log( r.Title + ' config did not parse.' );
-								}
-							}
-							
-							// Doesn't exist, go on
-							var o = false;
-
-							var d;
-
-							d = ( new Door() ).get( r.Name + ':' );
-							d.permissions[0] = 'r';
-							d.permissions[1] = 'w';
-							d.permissions[2] = 'e';
-							d.permissions[3] = 'd';
-
-							var o = {
-								Title: r.Name.split(':').join(''),
-								Volume: r.Name.split(':').join('') + ':',
-								Path: r.Name.split(':').join('') + ':',
-								SortPriority: 0,
-								Handler: r.FSys,
-								Type: 'Door',
-								MetaType: 'Directory',
-								ID: r.ID,
-								Mounted: true,
-								Driver: r.Type,
-								Door: d,
-								Visible: r.Visible != "false" ? true : false,
-								Config: r.Config,
-								Execute: r.Execute
-							};
-
-							// We need volume information
-							d.Volume = o.Volume;
-
-							// Add new disk to list
-							newIcons.push( o );
-						}
-					}
-					
-					// Check new icons with old icons
-					var hasNew = false;
-					var checks = [];
-					for( var a = 0; a < newIcons.length; a++ )
-					{
-						var ni = newIcons[ a ];
-						var found = false;
-						for( var b = 0; b < t.icons.length; b++ )
-						{
-							var ti = t.icons[ b ];
-							
-							if( ti.Title == ni.Title )
-							{
-								found = true;
-								
-								// Set hasNew if the config changed
-								// TODO: Do other config tests
-						
-								if( ti.Visible != ni.Visible )
-								{
-									hasNew = true;
-								}
-								else if( !ti.Config && ti.Config )
-								{
-									hasNew = true;
-								}
-								else if( ni.Config && ti.Config && ni.Config.visibility != ti.Config.visibility )
-								{
-									hasNew = true;
-								}
-							}
-						}
-						if( !found )
-						{
-							checks.push( a );
-							hasNew = true;
-						}
-					}
-					
-					// If we increased the amount of icons, it means we have new
-					if( newIcons.length != t.icons.length )
-						hasNew = true;
-
-					// Something changed!
-					if( hasNew || forceRefresh )
-					{
-						t.icons = newIcons;
-						t.redrawIcons();
-						if( checks.length )
-						{
-							for( var a = 0; a < checks.length; a++ )
-							{
-								var check = checks[ a ];
-								if( t.icons[ check ].Execute )
-								{
-									ExecuteJSXByPath( t.icons[ check ].Volume + t.icons[ check ].Execute );
-									t.icons[ check ].Execute = false;
-								}
-								testDrive( t.icons[ check ], t.icons[check ].Door );
-							}
+							//console.log( 'Bad json in vislist..' );
 						}
 					}
 					else
 					{
-						if( forceRefresh ) t.redrawIcons();
+						//console.log( 'No vislist..' );
 					}
-					
-					// Do the callback thing
-					if( callback && typeof( callback ) == 'function' )
+					let m = new Library( 'system.library' )
+					m.onExecuted = function( e, dat )
 					{
-						callback( t.icons );
-					}
-
-					// Check for new events
-					t.checkDesktopEvents();
+						// New icons to list
+						let newIcons = [];
 					
-					console.log( 'All: ' + ( forceRefresh ? 'force' : 'not' ), newIcons );
+						// Add system on top (after Ram: if it exists)
+						newIcons.push( {
+							Title:	   'System',
+							Volume:    'System:',
+							Path:	   'System:',
+							Type:	   'Door',
+							Handler:   'built-in',
+							Driver:    'Dormant',
+							MetaType:  'Directory',
+							IconClass: 'SystemDisk',
+							ID:	       'system', // TODO: fix
+							Mounted:   true,
+							Visible:   globalConfig.hiddenSystem == true ? false : true,
+							Door:	   Friend.DoorSystem
+						} );
+				
+						// Did we get a new list of disks from the server?
+						if( returnCode == 'ok' )
+						{
+							// Check shortcuts and add them to the desktop
+							var shorts = JSON.parse( shortcuts );
+							for( var a = 0; a < shorts.length; a++ )
+							{
+								if( !shorts[ a ] )
+								{
+									continue;
+								}
+							
+								if( shorts[ a ].substr( 0, 16 ) == 'DesktopShortcut:' )
+								{
+									var path = shorts[ a ].substr( 16, shorts[ a ].length - 16 );
+									var ind = path.indexOf( ':' );
+									var num = StrPad( path.substr( 0, ind ), 10, '0' );
+									path = path.substr( ind + 1, path.length - ( ind + 1 ) );
+								
+
+									// Link to a repository?
+									var iconFile = '';
+									if( path.substr( -11, 11 ) == ':repository' )
+									{
+										path = path.substr( 0, path.length - 11 );
+										iconFile = '/system.library/module/?module=system&command=repoappimage&i=' + GetFilename( path ) + '&sessionid=' + Workspace.sessionId;
+									}
+								
+									var fn = GetFilename( path );
+								
+									newIcons.push( {
+										Title: fn,
+										Filename: path,
+										Path: path,
+										IconFile: iconFile,
+										Type: path.substr( path.length - 1, 1 ) == '/' ? 'Directory' : 'File',
+										SortPriority: num,
+										Handler: 'built-in',
+										MetaType: 'Shortcut',
+										Visible: true
+									} );
+								}
+								else
+								{
+									var pair = shorts[a].split( ':' );
+									// Shift camelcase
+									var literal = '';
+									for( var c = 0; c < pair[0].length; c++ )
+									{
+										if( c > 0 && pair[0].charAt(c).toUpperCase() == pair[0].charAt(c) )
+										{
+											literal += ' ';
+										}
+										literal += pair[0].charAt( c );
+									}
+						
+									// Add custom icon
+									newIcons.push( {
+										Title: literal,
+										Filename: pair[0],
+										Type: 'Executable',
+										IconFile: '/' + pair[1],
+										Handler: 'built-in',
+										Driver: 'Shortcut',
+										MetaType: 'ExecutableShortcut',
+										SortPriority: 0,
+										ID: shorts[a].toLowerCase(),
+										Mounted: true,
+										Visible: true,
+										IconClass: literal.split( ' ' ).join( '_' ),
+										Door: 'executable'
+									} );
+								}
+							}
+						}
+
+						// Add DormantDrives to the list (automount)
+						var dormantDoors = DormantMaster.getDoors();
+						for ( var d = 0; d < dormantDoors.length; d++ )
+						{
+							var dormantDoor = dormantDoors[ d ];
+							if ( dormantDoor.AutoMount )
+							{
+								newIcons.push( 
+								{
+									Title: dormantDoor.Title,
+									Volume: dormantDoor.Volume,
+									Path: dormantDoor.Path,
+									Type: dormantDoor.Type,
+									Handler: dormantDoor.Handler,
+									Driver: dormantDoor.Drive,
+									MetaType: dormantDoor.MetaType,
+									IconClass: 'SystemDisk',
+									SortPriotity: 0,
+									ID: 'local', // TODO: fix
+									Mounted:  true,
+									Visible: true,
+									Door: dormantDoor,
+									Dormant: dormantDoor.Dormant
+								} );						
+							}
+						}
+
+						// Redraw icons when tested for disk info
+						function testDrive( o, d )
+						{
+							if( !d ) return;
+						
+							// Check disk info
+							if( d.dosAction )
+							{
+								d.dosAction( 'info', { path: o.Volume + 'disk.info' }, function( io )
+								{
+									var res = io.split( '<!--separate-->' );
+									if( res[0] == 'ok' )
+									{
+										var response = false;
+										try
+										{
+											response = JSON.parse( res[1] );
+										}
+										catch( k ){};
+										if( !response || ( response && response.response == 'File or directory do not exist' ) ) return;
+								
+										var fl = new File( o.Volume + 'disk.info' );
+										fl.onLoad = function( data )
+										{
+											if( data.indexOf( '{' ) >= 0 )
+											{
+												try
+												{
+													var dt = JSON.parse( data );
+													if( dt && dt.DiskIcon )
+													{
+														o.IconFile = getImageUrl( o.Volume + dt.DiskIcon );
+														t.redrawIcons();
+													}
+												}
+												catch( e ){}
+											}
+										}
+										fl.load();
+									}
+								} );
+							}
+						}
+
+						// Friend disks
+						var rows;
+						try
+						{
+							rows = JSON.parse( dat );
+						}
+						catch( e )
+						{
+							rows = false;
+						}
+					
+						// Check the friend disks
+						if( rows && rows.length )
+						{
+							for ( var a = 0; a < rows.length; a++ )
+							{
+								var r = rows[a];
+								if( r.Config.indexOf( '{' ) >= 0 )
+								{
+									try
+									{
+										r.Config = JSON.parse( r.Config );
+									}
+									catch( e )
+									{
+										console.log( r.Title + ' config did not parse.' );
+									}
+								}
+							
+								// Doesn't exist, go on
+								let o = false;
+
+								var d;
+
+								d = ( new Door() ).get( r.Name + ':' );
+								d.permissions[0] = 'r';
+								d.permissions[1] = 'w';
+								d.permissions[2] = 'e';
+								d.permissions[3] = 'd';
+
+								let nam = r.Name.split( ':' ).join( '' );
+
+								// Get the visstruct thingie
+								if( r.Visible != 'false' )
+									r.Visible = true;
+								else r.Visible = false;
+								if( visStruct && typeof( visStruct[ nam ] ) != 'undefined' )
+									r.Visible = visStruct[ nam ].Visibility == 'visible' ? true : false;
+								
+								o = {
+									Title: nam,
+									Volume: nam + ':',
+									Path: nam + ':',
+									SortPriority: 0,
+									Handler: r.FSys,
+									Type: 'Door',
+									MetaType: 'Directory',
+									ID: r.ID,
+									Mounted: true,
+									Driver: r.Type,
+									Door: d,
+									Visible: r.Visible,
+									Config: r.Config,
+									Execute: r.Execute
+								};
+
+								// We need volume information
+								d.Volume = o.Volume;
+
+								// Add new disk to list
+								newIcons.push( o );
+							}
+						}
+					
+						// Check new icons with old icons
+						var hasNew = false;
+						var checks = [];
+						for( var a = 0; a < newIcons.length; a++ )
+						{
+							var ni = newIcons[ a ];
+							var found = false;
+							for( var b = 0; b < t.icons.length; b++ )
+							{
+								var ti = t.icons[ b ];
+							
+								if( ti.Title == ni.Title )
+								{
+									found = true;
+								
+									// Set hasNew if the config changed
+									// TODO: Do other config tests
+						
+									if( ti.Visible != ni.Visible )
+									{
+										hasNew = true;
+									}
+									else if( !ti.Config && ti.Config )
+									{
+										hasNew = true;
+									}
+									else if( ni.Config && ti.Config && ni.Config.visibility != ti.Config.visibility )
+									{
+										hasNew = true;
+									}
+								}
+							}
+							if( !found )
+							{
+								checks.push( a );
+								hasNew = true;
+							}
+						}
+					
+						// If we increased the amount of icons, it means we have new
+						if( newIcons.length != t.icons.length )
+							hasNew = true;
+
+						// Something changed!
+						if( hasNew || forceRefresh )
+						{
+							t.icons = newIcons;
+							t.redrawIcons();
+							if( checks.length )
+							{
+								for( var a = 0; a < checks.length; a++ )
+								{
+									var check = checks[ a ];
+									if( t.icons[ check ].Execute )
+									{
+										ExecuteJSXByPath( t.icons[ check ].Volume + t.icons[ check ].Execute );
+										t.icons[ check ].Execute = false;
+									}
+									testDrive( t.icons[ check ], t.icons[check ].Door );
+								}
+							}
+						}
+						else
+						{
+							if( forceRefresh ) t.redrawIcons();
+						}
+					
+						// Do the callback thing
+						if( callback && typeof( callback ) == 'function' )
+						{
+							callback( t.icons );
+						}
+
+						// Check for new events
+						t.checkDesktopEvents();
+					}
+					m.execute( 'device/list' );
 				}
-				m.execute( 'device/list' );
+				vi.forceSend = true;
+				vi.execute( 'devicesettings' );
 			}
 			mo.forceSend = true;
 			mo.execute( 'workspaceshortcuts' );
@@ -5092,7 +5147,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 						return;
 					} 
 
-					var sn = new Library( 'system.library' );
+					let sn = new Library( 'system.library' );
 					sn.onExecuted = function( returnCode, returnData )
 					{
 						// If we got an OK result, then parse the return data (json data)
@@ -5117,12 +5172,26 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 								}
 							];
 						}
-						setInformation( rd );
+						let vi = new Module( 'system' );
+						vi.onExecuted = function( er, dr )
+						{
+							setInformation( rd, er == 'ok' ? dr : false );
+						}
+						vi.execute( 'devicesettings', { filesystem: dn } );
 					}
 					sn.execute( 'file/access', { devname: dn, path: pt } ); 
 
-					function setInformation( rd )
+					function setInformation( rd, vsettings )
 					{
+						if( vsettings )
+						{
+							try
+							{
+								vsettings = JSON.parse( vsettings );
+							}
+							catch( e ){};
+						}
+						
 						w.setContent( d.split( '!!' ).join( Workspace.seed ) );
 
 						Workspace.iconInfoDataField( w.getWindowElement(), true );
@@ -5140,6 +5209,14 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 						var visibility = false;
 						var inp = w.getWindowElement().getElementsByTagName( 'input' );
 						var visval = icon.Config && icon.Config.visibility ? icon.Config.visibility : 'visible';
+						
+						if( visval == 'visible' )
+						{
+							// From settings
+							if( vsettings && vsettings.Visibility )
+								visval = vsettings.Visibility;
+						}
+						
 						for( var a = 0; a < inp.length; a++ )
 						{
 							if( inp[a].name == 'visibility' )
@@ -5945,7 +6022,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 				args.Domains = sel[0].value;
 			}
 		}
-
+		
 		// Execute module action
 		l.onExecuted = function( r, d )
 		{
@@ -6468,7 +6545,6 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 	{
 		var zipPath = currentMovable.content.fileInfo.Path;
 		
-		Notify( { title: i18n( 'i18n_zip_start' ), text: i18n( 'i18n_zip_startdesc' ) } );
 		var ic = currentMovable.content.icons;
 		var f = [];
 		var dest = false;
@@ -6483,6 +6559,8 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		
 		if( dest && f.length )
 		{
+			Notify( { title: i18n( 'i18n_zip_start' ), text: i18n( 'i18n_zip_startdesc' ) } );
+			
 			// Files
 			if( dest.indexOf( '.' ) > 0 && dest.substr( dest.length - 1, 1 ) != '/' )
 			{
@@ -6540,11 +6618,14 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 			
 			s.execute( 'file/compress', { source: zipPath, files: files, archiver: 'zip', destination: dest, path: lpath } );
 		}
+		else
+		{
+			Notify( { title: i18n( 'i18n_zip_start_none' ), text: i18n( 'i18n_zip_startdesc_none' ) } );
+		}
 	},
 	// Uncompress files
 	unzipFiles: function()
 	{
-		Notify( { title: i18n( 'i18n_unzip_start' ), text: i18n( 'i18n_unzip_startdesc' ) } );
 		var ic = currentMovable.content.icons;
 		var f = [];
 		for( var a = 0; a < ic.length; a++ )
@@ -6556,6 +6637,7 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		}
 		if( f.length )
 		{
+			Notify( { title: i18n( 'i18n_unzip_start' ), text: i18n( 'i18n_unzip_startdesc' ) } );
 			for( var a = 0; a < f.length; a++ )
 			{
 				var s = new Library( 'system.library' );
@@ -6599,6 +6681,10 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 				}
 				s.execute( 'file/decompress', { path: f[a].Path, archiver: 'zip', detachtask : true } );
 			}
+		}
+		else
+		{
+			Notify( { title: i18n( 'i18n_unzip_start_none' ), text: i18n( 'i18n_unzip_startdesc_none' ) } );
 		}
 	},
 	// Refresh Doors menu recursively ------------------------------------------
@@ -8381,7 +8467,6 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 			else if( e == 'fail' ) 
 			{
 				console.log( '[getsetting] Got "fail" response.' );
-				//console.trace();
 			}
 			
 			Workspace.serverIsThere = true;
@@ -9721,7 +9806,7 @@ function AboutFriendUP()
 {
 	if( !Workspace.sessionId ) return;
 	var v = new View( {
-		title: i18n( 'about_system' ) + ' v1.2.3',
+		title: i18n( 'about_system' ) + ' v1.2.4',
 		width: 540,
 		height: 560,
 		id: 'about_friendup'
@@ -9870,6 +9955,11 @@ function ShowEula( accept, cbk )
 	f.onLoad = function( data )
 	{
 		d.innerHTML = data;
+		// Tell app we can show ourselves!
+		if( window.friendApp && window.friendApp.reveal )
+		{
+			friendApp.reveal();
+		}		
 	}
 	f.load();
 }
@@ -9897,7 +9987,7 @@ function handleSASRequest( e )
 	function deny( sasid )
 	{
 		var dec = {
-			path : 'system.library/app/decline/',
+			path : 'system.library/sas/decline/',
 			data : {
 				sasid : sasid,
 			},
@@ -10028,11 +10118,60 @@ if( window.friendApp )
 	}
 }
 
+// Friendchat / presence live events handler
+Workspace.receiveLive = function( viewId, jsonEvent ) {
+	const self = this;
+	let event = null;
+	try {
+		event = JSON.parse( jsonEvent );
+	} catch( ex ) {
+		console.log( 'Workspace.receiveLive - error parsing json', {
+			error     : ex,
+			jsonEvent : jsonEvent,
+		});
+		return;
+	}
+	
+	console.log( 'receiveLive', {
+		viewId : viewId,
+		json   : jsonEvent,
+		event  : event,
+	});
+	const appName = 'FriendChat';
+	// find friendchat app
+	let chat = null;
+	console.log( 'all apps', Workspace.applications );
+	Workspace.applications.some( app => {
+		console.log( 'looking for chat', {
+			app  : app,
+			name : app.applicationName,
+		});
+		if ( app.applicationName != appName )
+			return false;
+		
+		chat = app;
+		return true;
+	});
+	
+	if ( !chat ) {
+		console.log( 'receiveLive - chat not found' );
+		return;
+	}
+	
+	// send event
+	const msg = {
+		type   : 'native-view',
+		viewId : viewId,
+		data   : event,
+	};
+	chat.contentWindow.postMessage( msg, '*' );
+}
+
 // Receive push notification (when a user clicks native push notification on phone)
 Workspace.receivePush = function( jsonMsg, ready )
 {
 	if( !isMobile ) return "mobile";
-	var msg = jsonMsg ? jsonMsg : ( window.friendApp ? friendApp.get_notification() : false );
+	var msg = jsonMsg ? jsonMsg : ( window.friendApp && typeof friendApp.get_notification == 'function' ? friendApp.get_notification() : false );
 
 	// we use 1 as special case for no push being here... to make it easier to know when to launch startup sequence... maybe not ideal, but works
 	if( msg == false || msg == 1 ) 
@@ -10130,7 +10269,7 @@ Workspace.receivePush = function( jsonMsg, ready )
 				return 'ok';
 			}
 		}
-	
+		
 		// Function to set the notification as read...
 		function notificationRead()
 		{
@@ -10153,6 +10292,10 @@ Workspace.receivePush = function( jsonMsg, ready )
 		{
 			var app = false;
 			var apps = Workspace.applications;
+			
+			//too early?
+			if( !apps ) return;
+			
 			for( var a = 0; a < apps.length; a++ )
 			{
 				// Found the application
@@ -10167,7 +10310,8 @@ Workspace.receivePush = function( jsonMsg, ready )
 			// TODO: Localize response!
 			if( !app )
 			{
-				Notify( { title: i18n( 'i18n_could_not_find_application' ), text: i18n( 'i18n_could_not_find_app_desc' ) } );
+				// no notification here... we got weird message in our new android app but everything worked...
+				//Notify( { title: i18n( 'i18n_could_not_find_application' ), text: i18n( 'i18n_could_not_find_app_desc' ) } );
 				if( Workspace.onReady ) Workspace.onReady();
 				return;
 			}
@@ -10273,7 +10417,7 @@ function mobileDebug( str, clear )
 // TODO: Test loading different themes
 
 _applicationBasics = {};
-function loadApplicationBasics()
+function loadApplicationBasics( callback )
 {
 	// Preload basic scripts
 	var a = new File( '/webclient/js/apps/api.js' );
@@ -10312,6 +10456,7 @@ function loadApplicationBasics()
 	j.onLoad = function( data )
 	{
 		_applicationBasics.js = data;
+		if( callback ) callback();
 	}
 	j.load();
 };

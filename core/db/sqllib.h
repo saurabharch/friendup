@@ -92,6 +92,7 @@ typedef struct SQLLibrary
 
 	SQLConnection con;
 	void					*sd;	// special data
+	char					*l_LastError;		// last sql error
 	
 } SQLLibrary;
 
