@@ -10021,14 +10021,16 @@ Workspace.receiveLive = function( viewId, jsonEvent ) {
 	try {
 		event = JSON.parse( jsonEvent );
 	} catch( ex ) {
-		console.log( 'Workspace.receiveLive - error parsing json', {
+		console.trace( 'Workspace.receiveLive - error parsing json', {
 			error     : ex,
 			jsonEvent : jsonEvent,
 		});
 		return;
 	}
 	
+	const now = new Date();
 	console.log( 'receiveLive', {
+		time   : now.toLocaleTimeString(),
 		viewId : viewId,
 		json   : jsonEvent,
 		event  : event,
