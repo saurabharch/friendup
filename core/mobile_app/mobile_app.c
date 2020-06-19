@@ -23,6 +23,9 @@
 #include <util/sha256.h>
 #include <iconv.h>
 
+// disable debug
+#undef __DEBUG
+
 #define KEEPALIVE_TIME_s 180 //ping time (10 before)
 #define ENABLE_MOBILE_APP_NOTIFICATION_TEST_SIGNAL 1
 #define USE_ONLY_FIREBASE		//use only firebase
@@ -231,28 +234,31 @@ int MobileAppAddNewUserConnection( MobileAppConnection *con, const char *usernam
 			
 			SQLLibrary *sqllib  = SLIB->LibrarySQLGet( SLIB );
 
-			userConnections->umac_UserID = 0;
 			if( sqllib != NULL )
 			{
-				char *qery = FMalloc( 1048 );
-				qery[ 1024 ] = 0;
-				sqllib->SNPrintF( sqllib, qery, 1024, "SELECT ID FROM FUser WHERE `Name`=\"%s\"", username );
-				void *res = sqllib->Query( sqllib, qery );
-				if( res != NULL )
+				userConnections->umac_UserID = 0;
+				if( sqllib != NULL )
 				{
-					char **row;
-					if( ( row = sqllib->FetchRow( sqllib, res ) ) )
+					char *qery = FMalloc( 1048 );
+					qery[ 1024 ] = 0;
+					sqllib->SNPrintF( sqllib, qery, 1024, "SELECT ID FROM FUser WHERE `Name`=\"%s\"", username );
+					void *res = sqllib->Query( sqllib, qery );
+					if( res != NULL )
 					{
-						if( row[ 0 ] != NULL )
+						char **row;
+						if( ( row = sqllib->FetchRow( sqllib, res ) ) )
 						{
-							char *end;
-							userConnections->umac_UserID = strtoul( row[0], &end, 0 );
+							if( row[ 0 ] != NULL )
+							{
+								char *end;
+								userConnections->umac_UserID = strtoul( row[0], &end, 0 );
+							}
 						}
+						sqllib->FreeResult( sqllib, res );
 					}
-					sqllib->FreeResult( sqllib, res );
+					SLIB->LibrarySQLDrop( SLIB, sqllib );
+					FFree( qery );
 				}
-				SLIB->LibrarySQLDrop( SLIB, sqllib );
-				FFree( qery );
 			}
 
 			DEBUG("Will add entry to hashmap!\n");
@@ -1149,9 +1155,9 @@ int MobileAppNotifyUserRegister( void *lsb, const char *username, const char *ch
 				if( locses != NULL )
 				{
 					//WSCData *data = (WSCData *)us_WSConnections;
-					DEBUG("[AdminWebRequest] Send Message through websockets: %s clients: %p timestamptrue: %d\n", locses->us_DeviceIdentity, locses->us_WSConnections, ( ( (timestamp - locses->us_LoggedTime) < sb->sl_RemoveSessionsAfterTime ) ) );
+					DEBUG("[AdminWebRequest] Send Message through websockets: %s clients: %p timestamptrue: %d\n", locses->us_DeviceIdentity, locses->us_WSD, ( ( (timestamp - locses->us_LoggedTime) < sb->sl_RemoveSessionsAfterTime ) ) );
 				
-					if( ( ( (timestamp - locses->us_LoggedTime) < sb->sl_RemoveSessionsAfterTime ) ) && locses->us_WSConnections != NULL )
+					if( ( ( (timestamp - locses->us_LoggedTime) < sb->sl_RemoveSessionsAfterTime ) ) && locses->us_WSD != NULL )
 					{
 						int msgLen = 0;
 						NotificationSent *lns = NotificationSentNew();
@@ -1351,23 +1357,6 @@ int MobileAppNotifyUserUpdate( void *lsb, const char *username, Notification *no
 	{
 		DEBUG("notif is equal to NULL\n");
 		return 1;
-		//notif = NotificationManagerGetTreeByNotifSentDB( sb->sl_NotificationManager, notifSentID );
-		// memory leak check
-		/*
-		if( notif != NULL )
-		{
-			NotificationSent *ln = notif->n_NotificationsSent;
-			while( ln != NULL )
-			{
-				if( notifSentID == ln->ns_ID )
-				{
-					notifSent = ln;
-					break;
-				}
-				ln = (NotificationSent *)ln->node.mln_Succ;
-			}
-		}
-		*/
 	}
 	
 	if( notif != NULL )
@@ -1434,9 +1423,7 @@ int MobileAppNotifyUserUpdate( void *lsb, const char *username, Notification *no
 		Log( FLOG_INFO, "Android (update) tokens which should get notification: %s", bs->bs_Buffer );
 		BufStringDelete( bs );
 	}
-	
-	//FRIEND_MUTEX_UNLOCK( &globalSessionRemovalMutex );
-	
+
 	// message to user Android: "{\"t\":\"notify\",\"channel\":\"%s\",\"content\":\"%s\",\"title\":\"%s\"}"
 	// message from example to APNS: /client.py '{"auth":"72e3e9ff5ac019cb41aed52c795d9f4c","action":"notify","payload":"hellooooo","sound":"default","token":"1f3b66d2d16e402b5235e1f6f703b7b2a7aacc265b5af526875551475a90e3fe","badge":1,"category":"whatever"}'
 	
@@ -1444,7 +1431,7 @@ int MobileAppNotifyUserUpdate( void *lsb, const char *username, Notification *no
 	
 	char *jsonMessageIOS;
 	int jsonMessageIosLength = reqLengith+512;
-	//if( sb->l_APNSConnection != NULL )&& sb->l_APNSConnection->wapns_Connection != NULL )
+
 	if( sb->sl_NotificationManager->nm_APNSCert != NULL )
 	{
 		FULONG userID = 0;
@@ -1478,8 +1465,6 @@ int MobileAppNotifyUserUpdate( void *lsb, const char *username, Notification *no
 					//NotificationManagerNotificationSendIOS( sb->sl_NotificationManager, notif->n_Title, notif->n_Content, "default", 1, notif->n_Application, notif->n_Extra, lma->uma_AppToken );
 					/*
 					int msgsize = snprintf( jsonMessageIOS, jsonMessageIosLength, "{\"auth\":\"%s\",\"action\":\"notify\",\"payload\":\"%s\",\"sound\":\"default\",\"token\":\"%s\",\"badge\":1,\"category\":\"whatever\",\"application\":\"%s\",\"action\":\"register\",\"id\":%lu}", sb->l_AppleKeyAPI, notif->n_Content, lma->uma_AppToken, notif->n_Application, lns->ns_ID );
-			
-					WebsocketClientSendMessage( sb->l_APNSConnection->wapns_Connection, jsonMessageIOS, msgsize );
 					*/
 					
 					NotificationSentDelete( lns );

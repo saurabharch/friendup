@@ -74,7 +74,7 @@
 //
 //
 
-extern int UserDeviceMount( SystemBase *l, SQLLibrary *sqllib, User *usr, int force, FBOOL unmountIfFail, char **err, FBOOL notify );
+extern int UserDeviceMount( SystemBase *l, User *usr, int force, FBOOL unmountIfFail, char **err, FBOOL notify );
 
 
 /**
@@ -406,6 +406,7 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 	//
 	
 	char *sessionid = FCalloc( DEFAULT_SESSION_ID_SIZE+1, sizeof(char) );
+	char userName[ 256 ];
 	//char sessionid[ DEFAULT_SESSION_ID_SIZE ];
 	//sessionid[ 0 ] = 0;
     
@@ -439,7 +440,9 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 	{
 		HashmapElement *tst = GetHEReq( *request, "sessionid" );
 		HashmapElement *ast = GetHEReq( *request, "authid" );
-		if( tst == NULL && ast == NULL )
+		HashmapElement *sst = GetHEReq( *request, "servertoken" ); // TODO: Only allow this on localhost!
+		
+		if( tst == NULL && ast == NULL && sst == NULL )
 		{			
 			struct TagItem tags[] = {
 				{ HTTP_HEADER_CONTENT_TYPE,(FULONG)StringDuplicate( "text/html" ) },
@@ -475,6 +478,7 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 			//
 			
 			DEBUG("Authid received\n");
+			
 			
 			if( (*request)->http_RequestSource == HTTP_SOURCE_WS )
 			{
@@ -565,6 +569,47 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 				}
 			}
 		}
+		
+		// access through server token
+		else if( sst )
+		{
+			//
+			// check if request came from WebSockets
+			//
+			
+			DEBUG("ServerToken received\n");
+			
+			if( loggedSession == NULL )
+			{
+				SQLLibrary *sqllib = l->LibrarySQLGet( l );
+
+				// Get authid from mysql
+				if( sqllib != NULL )
+				{
+					char qery[ 1024 ];
+
+					// TODO: Remove need for existing SessionID (instead generate it if it does not exist)!
+					sqllib->SNPrintF( sqllib, qery, sizeof(qery), "SELECT u.SessionID, u.Name FROM FUser u WHERE u.SessionID != \"\" AND u.ServerToken=\"%s\" LIMIT 1",( char *)sst->hme_Data );;
+					
+					void *res = sqllib->Query( sqllib, qery );
+					if( res != NULL )
+					{
+						char **row;
+						if( ( row = sqllib->FetchRow( sqllib, res ) ) )
+						{
+							if( row[ 0 ] != NULL )
+							{
+								snprintf( sessionid, DEFAULT_SESSION_ID_SIZE,"%s", row[ 0 ] );
+								snprintf( userName, 256, "%s", row[ 1 ] );
+							}
+						}
+						sqllib->FreeResult( sqllib, res );
+					}
+					l->LibrarySQLDrop( l, sqllib );
+				}
+			}
+		}
+		
 		
 		{
 			char *deviceid = NULL;
@@ -716,6 +761,39 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 			if( deviceid != NULL )
 			{
 				FFree( deviceid );
+			}
+		}
+		
+		// 
+		// But we tried with a server socket
+		if( loggedSession == NULL && sst && strlen( sessionid ) > 0 )
+		{
+			DEBUG( "We asked for server token and have session: %s (%s)\n", sessionid, userName );
+			int userAdded = 0;
+			
+			// Server token reins supreme! Add the session
+			if( ( loggedSession = UserSessionNew( sessionid, "server" ) ) != NULL )
+			{
+				User *tmpusr = UMGetUserByName( l->sl_UM, userName );
+				if( !tmpusr )
+				{
+					tmpusr = UMUserGetByNameDB( l->sl_UM, userName );
+					UMAddUser( l->sl_UM,  tmpusr );
+					userAdded = 1;
+				}
+				if( tmpusr )
+				{
+					loggedSession->us_User = tmpusr;
+					char *err = NULL;
+					UserDeviceMount( l, loggedSession->us_User, 0, TRUE, &err, TRUE );
+					if( err != NULL )
+					{
+						Log( FLOG_ERROR, "Login mount error. UserID: %lu Error: %s\n", loggedSession->us_User->u_ID, err );
+						FFree( err );
+					}
+					
+					USMUserSessionAddToList( l->sl_USM, loggedSession );
+				}
 			}
 		}
 		
@@ -955,7 +1033,11 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 	
 	if( loginLogoutCalled == FALSE && loggedSession != NULL )
 	{
-		loggedSession->us_InUseCounter++;
+		if( FRIEND_MUTEX_LOCK( &(loggedSession->us_Mutex ) ) == 0 )
+		{
+			loggedSession->us_InUseCounter++;
+			FRIEND_MUTEX_UNLOCK( &(loggedSession->us_Mutex ) );
+		}
 	}
 	
 	/// @cond WEB_CALL_DOCUMENTATION
@@ -1805,13 +1887,14 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 								{ 
 								
 								}
+								l->LibrarySQLDrop( l, sqlLib );
 							
 								UMAddUser( l->sl_UM, loggedSession->us_User );
 							
 								DEBUG("New user and session added\n");
 							
 								char *err = NULL;
-								UserDeviceMount( l, sqlLib, loggedSession->us_User, 0, TRUE, &err, TRUE );
+								UserDeviceMount( l, loggedSession->us_User, 0, TRUE, &err, TRUE );
 								if( err != NULL )
 								{
 									Log( FLOG_ERROR, "Login mount error. UserID: %lu Error: %s\n", loggedSession->us_User->u_ID, err );
@@ -1820,7 +1903,6 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 							
 								DEBUG("Devices mounted\n");
 								userAdded = TRUE;
-								l->LibrarySQLDrop( l, sqlLib );
 							}
 							else
 							{
@@ -2124,13 +2206,15 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 								{ 
 
 								}
+								l->LibrarySQLDrop( l, sqlLib );
+								
 								DEBUG("[SystembaseWeb] user login\n");
 
 								loggedSession->us_MobileAppID = umaID;
 								UMAddUser( l->sl_UM, loggedSession->us_User );
 
 								char *err = NULL;
-								UserDeviceMount( l, sqlLib, loggedSession->us_User, 0, TRUE, &err, TRUE );
+								UserDeviceMount( l, loggedSession->us_User, 0, TRUE, &err, TRUE );
 								if( err != NULL )
 								{
 									Log( FLOG_ERROR, "Login1 mount error. UserID: %lu Error: %s\n", loggedSession->us_User->u_ID, err );
@@ -2138,7 +2222,6 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 								}
 
 								userAdded = TRUE;
-								l->LibrarySQLDrop( l, sqlLib );
 							}
 						}
 						else
@@ -2332,7 +2415,11 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 	Log( FLOG_INFO, "\t\t\tWEB REQUEST FUNCTION func END: %s\n", urlpath[ 0 ] );
 	if( loginLogoutCalled == FALSE && loggedSession != NULL )
 	{
-		loggedSession->us_InUseCounter--;
+		if( FRIEND_MUTEX_LOCK( &(loggedSession->us_Mutex ) ) == 0 )
+		{
+			loggedSession->us_InUseCounter--;
+			FRIEND_MUTEX_UNLOCK( &(loggedSession->us_Mutex ) );
+		}
 	}
 	
 	FFree( sessionid );
@@ -2343,7 +2430,11 @@ error:
 	Log( FLOG_INFO, "\t\t\tWEB REQUEST FUNCTION func EERROR END: %s\n", urlpath[ 0 ] );
 	if( loginLogoutCalled == FALSE && loggedSession != NULL )
 	{
-		loggedSession->us_InUseCounter--;
+		if( FRIEND_MUTEX_LOCK( &(loggedSession->us_Mutex ) ) == 0 )
+		{
+			loggedSession->us_InUseCounter--;
+			FRIEND_MUTEX_UNLOCK( &(loggedSession->us_Mutex ) );
+		}
 	}
 
 	FFree( sessionid );

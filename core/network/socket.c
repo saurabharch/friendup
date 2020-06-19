@@ -705,29 +705,47 @@ int SocketConnect( Socket* sock, const char *host )
 					switch( error )
 					{
 					case SSL_ERROR_NONE:
+					{
 						// NO error..
 						FERROR( "[SocketConnect] No error\n" );
 						break;
 						//return incoming;
+					}
 					case SSL_ERROR_ZERO_RETURN:
+					{
 						FERROR("[SocketConnect] SSL_ACCEPT error: Socket closed.\n" );
+						break;
+					}
 					case SSL_ERROR_WANT_READ:
+					{
 						FERROR( "[SocketConnect] Error want read, retrying\n" );
+						break;
+					}
 					case SSL_ERROR_WANT_WRITE:
+					{
 						FERROR( "[SocketConnect] Error want write, retrying\n" );
 						break;
+					}
 					case SSL_ERROR_WANT_ACCEPT:
+					{
 						FERROR( "[SocketConnect] Want accept\n" );
 						break;
+					}
 					case SSL_ERROR_WANT_X509_LOOKUP:
+					{
 						FERROR( "[SocketConnect] Want 509 lookup\n" );
 						break;
+					}
 					case SSL_ERROR_SYSCALL:
+					{
 						FERROR( "[SocketConnect] Error syscall!\n" );
 						return -2;
+					}
 					default:
+					{
 						FERROR( "[SocketConnect] Other error.\n" );
 						return -3;
+					}
 					}
 				}
 				return -1;
@@ -1267,6 +1285,10 @@ inline Socket* SocketAccept( Socket* sock )
 		{
 			INFO( "Error: Could not get a certificate from: \n" );
 		}
+		else
+		{
+			X509_free( cert );
+		}
 	}
 
 #ifdef USE_SOCKET_REAPER
@@ -1467,12 +1489,11 @@ inline int SocketRead( Socket* sock, char* data, unsigned int length, unsigned i
 		int read_retries = 0;
 		struct timeval timeout;
 		fd_set fds;
-#define MINIMUMRETRY 30000
-		int retryCount = expectedLength > 0 ? MINIMUMRETRY : 3000; // User do be 3000
+// Microseconds! I.e. 400 ms
+#define READTIMEOUT 400000
 		if( expectedLength > 0 && length > expectedLength ) length = expectedLength;
-		int startTime = time( NULL );
-
-		//DEBUG("SOCKREAD %p\n", sock );
+		struct timeval start, stop;
+		gettimeofday( &start, NULL );
 
 		while( 1 )
 		{
@@ -1496,107 +1517,84 @@ inline int SocketRead( Socket* sock, char* data, unsigned int length, unsigned i
 
 				switch( err )
 				{
-				// The TLS/SSL I/O operation completed.
-				case SSL_ERROR_NONE:
-					FERROR( "[SocketRead] Completed successfully.\n" );
-					return read;
-					// The TLS/SSL connection has been closed. Goodbye!
-				case SSL_ERROR_ZERO_RETURN:
-					FERROR( "[SocketRead] The connection was closed.\n" );
-					//return SOCKET_CLOSED_STATE;
-					return -1;
-					// The operation did not complete. Call again.
-				case SSL_ERROR_WANT_READ:
-					// NB: We used to retry 10000 times!
-					if( read == 0 && read_retries++ < retryCount )
-					{
-						// We are downloading a big file
-
-						// TODO: This usleep is the old code (before usleep(1))
-						usleep( read_retries < 100 ? 0 : ( read_retries < 200 ? 1 : ( retryCount << 1 ) ) );
-
-						/*int blocked = sock->s_Blocked;
+					// The TLS/SSL I/O operation completed.
+					case SSL_ERROR_NONE:
+						FERROR( "[SocketRead] Completed successfully.\n" );
+						return read;
+						// The TLS/SSL connection has been closed. Goodbye!
+					case SSL_ERROR_ZERO_RETURN:
+						FERROR( "[SocketRead] The connection was closed.\n" );
+						//return SOCKET_CLOSED_STATE;
+						return -1;
+						// The operation did not complete. Call again.
+					case SSL_ERROR_WANT_READ:
+						// NB: We used to retry 10000 times!
+						if( read == 0 )
+						{
+							gettimeofday( &stop, NULL );	
+							if( stop.tv_usec - start.tv_usec < READTIMEOUT )
+							{
+								continue;
+							}
+						}
+						return read;
+						// The operation did not complete. Call again.
+					case SSL_ERROR_WANT_WRITE:
+						//if( pthread_mutex_lock( &sock->mutex ) == 0 )
+						{
+							FERROR( "[SocketRead] Want write.\n" );
 							FD_ZERO( &fds );
 							FD_SET( sock->fd, &fds );
 
-							timeout.tv_sec = 0;
-							timeout.tv_usec = read_retries << 2;
-
-							select( sock->fd+1, &fds, NULL, NULL, &timeout );
-
-							int flags = fcntl( sock->fd, F_GETFL, 0 );
-							if( !blocked )
-							{
-								flags |= O_NONBLOCK;
-							}
-							else
-							{
-								flags &= ~O_NONBLOCK;
-							}
-
-							sock->s_Blocked = blocked;
-							fcntl( sock->fd, F_SETFL, flags );
-						 */
-						continue;
-					}
-					return read;
-					// The operation did not complete. Call again.
-				case SSL_ERROR_WANT_WRITE:
-					//if( pthread_mutex_lock( &sock->mutex ) == 0 )
-					{
-						FERROR( "[SocketRead] Want write.\n" );
-						FD_ZERO( &fds );
-						FD_SET( sock->fd, &fds );
-
-						//pthread_mutex_unlock( &sock->mutex );
-					}
-					timeout.tv_sec = sock->s_Timeouts;
-					timeout.tv_usec = sock->s_Timeoutu;
-
-					err = select( sock->fd + 1, NULL, &fds, NULL, &timeout );
-
-					if( err > 0 )
-					{
-						usleep( 50000 );
-						FERROR("[SocketRead] want write\n");
-						continue; // more data to read...
-					}
-					else if( err == 0 )
-					{
-						FERROR("[SocketRead] want write TIMEOUT....\n");
-						return read;
-					}
-					FERROR("[SocketRead] want write everything read....\n");
-					return read;
-				case SSL_ERROR_SYSCALL:
-
-					//DEBUG("SSLERR : err : %d res: %d\n", err, res );
-					
-					FERROR("[SocketRead] Error syscall, bufsize = %d.\n", buf );
-					if( err > 0 )
-					{
-						if( errno == 0 )
-						{
-							FERROR(" [SocketRead] Connection reset by peer.\n" );
-							return -1;
-							//return SOCKET_CLOSED_STATE;
+							//pthread_mutex_unlock( &sock->mutex );
 						}
-						else 
+						timeout.tv_sec = sock->s_Timeouts;
+						timeout.tv_usec = sock->s_Timeoutu;
+
+						err = select( sock->fd + 1, NULL, &fds, NULL, &timeout );
+
+						if( err > 0 )
 						{
-							FERROR( "[SocketRead] Error syscall error: %s\n", strerror( errno ) );
+							usleep( 50000 );
+							FERROR("[SocketRead] want write\n");
+							continue; // more data to read...
 						}
-					}
-					else if( err == 0 )
-					{
-						FERROR( "[SocketRead] Error syscall no error? return.\n" );
+						else if( err == 0 )
+						{
+							FERROR("[SocketRead] want write TIMEOUT....\n");
+							return read;
+						}
+						FERROR("[SocketRead] want write everything read....\n");
 						return read;
-					}
+					case SSL_ERROR_SYSCALL:
+
+						//DEBUG("SSLERR : err : %d res: %d\n", err, res );
 					
-					FERROR( "[SocketRead] Error syscall other error. return.\n" );
-					return read;
-					// Don't retry, just return read
-				default:
-					return read;
+						FERROR("[SocketRead] Error syscall, bufsize = %d.\n", buf );
+						if( err > 0 )
+						{
+							if( errno == 0 )
+							{
+								FERROR(" [SocketRead] Connection reset by peer.\n" );
+								return -1;
+								//return SOCKET_CLOSED_STATE;
+							}
+							else 
+							{
+								FERROR( "[SocketRead] Error syscall error: %s\n", strerror( errno ) );
+							}
+						}
+						else if( err == 0 )
+						{
+							FERROR( "[SocketRead] Error syscall no error? return.\n" );
+							return read;
+						}
+					
+						FERROR( "[SocketRead] Error syscall other error. return.\n" );
+						return read;
+						// Don't retry, just return read
+					default:
+						return read;
 				}
 			}
 		}
@@ -2215,61 +2213,50 @@ BufString *SocketReadTillEnd( Socket* sock, unsigned int pass __attribute__((unu
 	int locbuffersize = 8192;
 	char locbuffer[ locbuffersize ];
 	int fullPackageSize = 0;
-	unsigned int read = 0;
+	FQUAD read = 0;
+	int retries = 0;
 
 	BufString *bs = BufStringNew();
 
 	while( quit != TRUE )
 	{
-		if( sock->s_Blocked == TRUE )
+		//if( sock->s_Blocked == TRUE )
 		{
-			int ret = poll( fds, 2, 10 * 1000);
+			int ret = poll( fds, 1, 10 * 1000);
 			
-			DEBUG("Before select\n");
+			DEBUG("[SocketReadTillEnd] Before select, ret: %d\n", ret );
 			if( ret == 0 )
 			{
-				DEBUG("Timeout!\n");
+				DEBUG("[SocketReadTillEnd] Timeout!\n");
 				BufStringDelete( bs );
 				return NULL;
 			}
-			else if(  ret < 0 )
+			else if( ret < 0 )
 			{
-				DEBUG("Error\n");
+				DEBUG("[SocketReadTillEnd] Error\n");
 				BufStringDelete( bs );
 				return NULL;
 			}
-			/*
-			if( ( n = select( sock->fd+1, &rset, NULL, NULL, &tv ) ) == 0 )
-			{
-				FERROR("[SocketReadTillEnd] Connection timeout\n");
-				//SocketSetBlocking( sock, FALSE );
-				//BufStringDelete( bs );
-				return NULL;
-
-			}
-			else if( n < 0 )
-			{
-				FERROR("[SocketReadTillEnd] Select error\n");
-			}
-			*/
 		}
-
-		//SocketSetBlocking( sock, FALSE );
 
 		if( sock->s_SSLEnabled == TRUE )
 		{
-			unsigned int read = 0;
 			int res = 0, err = 0;//, buf = length;
-			int retries = 0;
+			
+			DEBUG("[SocketReadTillEnd] SSL enabled\n");
 
-			while( TRUE )
+			if( fds->revents & EPOLLIN )
+			//if( fds.revents & POLLIN )
+			//while( TRUE )
 			{
-				//DEBUG("Before read\n");
+				DEBUG("[SocketReadTillEnd] Before read\n");
 				//if( read + buf > length ) buf = length - read;
 				if( ( res = SSL_read( sock->s_Ssl, locbuffer, locbuffersize ) ) >= 0 )
 				{
-					read += (unsigned int)res;
+					read += (FQUAD)res;
 
+					DEBUG("[SocketReadTillEnd] Read: %d fullpackage: %d\n", res, fullPackageSize );
+					
 					FULONG *rdat = (FULONG *)locbuffer;
 					if( ID_FCRE == rdat[ 0 ] )
 					{
@@ -2277,15 +2264,17 @@ BufString *SocketReadTillEnd( Socket* sock, unsigned int pass __attribute__((unu
 					}
 					BufStringAddSize( bs, locbuffer, res );
 
-					if( fullPackageSize > 0 && read >= (unsigned int) fullPackageSize )
+					if( fullPackageSize > 0 && read >= (FQUAD) fullPackageSize )
 					{
 						return bs;
 					}
 				}
+				DEBUG("[SocketReadTillEnd] res2 : %d fullpackagesize %d\n", res, fullPackageSize );
 
 				if( res < 0 )
 				{
 					err = SSL_get_error( sock->s_Ssl, res );
+					DEBUG("[SocketReadTillEnd] err: %d\n", err );
 					switch( err )
 					{
 
@@ -2295,18 +2284,18 @@ BufString *SocketReadTillEnd( Socket* sock, unsigned int pass __attribute__((unu
 						return bs;
 						// The TLS/SSL connection has been closed. Goodbye!
 					case SSL_ERROR_ZERO_RETURN:
-						FERROR( "[SocketReadTillEnd] The connection was closed, return %d\n", read );
+						FERROR( "[SocketReadTillEnd] The connection was closed, return %ld\n", read );
 						return bs;
 						// The operation did not complete. Call again.
 					case SSL_ERROR_WANT_READ:
-						return bs;
+						break;
 
 					case SSL_ERROR_WANT_WRITE:
 						return bs;
 					case SSL_ERROR_SYSCALL:
 						return bs;
 					default:
-
+						DEBUG("default\n");
 						usleep( 50 );
 						if( retries++ > 15 )
 						{
@@ -2316,6 +2305,7 @@ BufString *SocketReadTillEnd( Socket* sock, unsigned int pass __attribute__((unu
 				}
 				else if( res == 0 )
 				{
+					DEBUG("res = 0\n");
 					if( retries++ > 15 )
 					{
 						return bs;
@@ -2332,7 +2322,7 @@ BufString *SocketReadTillEnd( Socket* sock, unsigned int pass __attribute__((unu
 
 		else
 		{
-			int retries = 0, res = 0;
+			int res = 0;
 
 			while( 1 )
 			{
@@ -2375,12 +2365,12 @@ BufString *SocketReadTillEnd( Socket* sock, unsigned int pass __attribute__((unu
 						//FERROR( "[SocketReadTillEnd] Resource temporarily unavailable.. Read %d/ (retries %d)\n", read, retries );
 						continue;
 					}
-					DEBUG( "[SocketReadTillEnd] Read %d  res < 0/\n", read );
+					DEBUG( "[SocketReadTillEnd] Read %ld  res < 0/\n", read );
 					return bs;
 				}
-				DEBUG( "[SocketReadTillEnd] Read %d/\n", read );
+				DEBUG( "[SocketReadTillEnd] Read %ld fullpackagesize %d\n", read, fullPackageSize );
 			}
-			DEBUG( "[SocketReadTillEnd] Done reading %d/ (errno: %d)\n", read, errno );
+			DEBUG( "[SocketReadTillEnd] Done reading %ld/ (errno: %d)\n", read, errno );
 		}
 	}	// QUIT != TRUE
 	return NULL;

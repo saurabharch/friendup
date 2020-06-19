@@ -144,6 +144,22 @@ Http *DeviceMWebRequest( void *m, char **urlpath, Http* request, UserSession *lo
 	SystemBase *l = (SystemBase *)m;
 	Http *response = NULL;
 	
+	// No urlpath..
+	// TODO: Give this a unique error message..
+	if( !urlpath || !urlpath[ 1 ] )
+	{
+		struct TagItem tags[] = {
+			{ HTTP_HEADER_CONTENT_TYPE, (FULONG)StringDuplicate( DEFAULT_CONTENT_TYPE ) },
+			{ HTTP_HEADER_CONNECTION, (FULONG)StringDuplicate( "close" ) },
+			{ TAG_DONE, TAG_DONE }
+		};
+		response = HttpNewSimple( HTTP_200_OK, tags );
+		char dictmsgbuf[ 256 ];
+		snprintf( dictmsgbuf, sizeof(dictmsgbuf), "fail<!--separate-->{ \"response\": \"%s\", \"code\":\"%d\" }", l->sl_Dictionary->d_Msg[DICT_FUNCTION_NOT_FOUND], DICT_FUNCTION_NOT_FOUND );
+		HttpAddTextContent( response, dictmsgbuf );	
+		return response;
+	}
+	
 	/// @cond WEB_CALL_DOCUMENTATION
 	/**
 	* 
@@ -588,16 +604,7 @@ f.Name ASC";
 				FULONG locid = (FLONG)strtol(( char *)el->hme_Data, &next, 0);
 				if( locid > 0 )
 				{
-					UserGroup *lg = l->sl_UGM->ugm_UserGroups;
-					while( lg != NULL )
-					{
-						if( locid == lg->ug_ID )
-						{
-							usrgrp = lg;
-							break;
-						}
-						lg = (UserGroup *)lg->node.mln_Succ;
-					}
+					usrgrp = UGMGetGroupByID( l->sl_UGM, locid );
 				}
 			}
 			
@@ -1358,13 +1365,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 				}
 			}
 			
-			LIST_FOR_EACH( l->sl_UGM->ugm_UserGroups, usergroup, UserGroup * )
-			{
-				if( strcmp( usergroupname, usergroup->ug_Name ) == 0 )
-				{
-					break;
-				}
-			}
+			usergroup = UGMGetGroupByName( l->sl_UGM, usergroupname );
 			
 			if( user == NULL )
 			{
@@ -1412,16 +1413,8 @@ AND LOWER(f.Name) = LOWER('%s')",
 					{
 						DEBUG("[DeviceMWebRequest] Devices were not mounted for user. They will be mounted now\n");
 					
-						SQLLibrary *sqllib  = l->LibrarySQLGet( l );
-						if( sqllib != NULL )
-						{
-							UserDeviceMount( l, sqllib, user, 0, TRUE, &error, TRUE );
-							l->LibrarySQLDrop( l, sqllib );
-						}
-						else
-						{
-							FERROR("Cannot get sql.library slot\n");
-						}
+						UserDeviceMount( l, user, 0, TRUE, &error, TRUE );
+
 					}
 				
 					File *file = FCalloc( 1, sizeof( File ) );

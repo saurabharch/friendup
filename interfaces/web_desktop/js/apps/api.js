@@ -6186,7 +6186,37 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 								
 								if( key && !callback )
 								{
-									if( permissions[ key ] )
+									if( Array.isArray( key ) )
+									{
+										var out = [];
+										
+										for( var i in key )
+										{
+											if( key[i] && permissions[ key[i] ] )
+											{
+												if( Array.isArray( permissions[ key[i] ] ) )
+												{
+													for( var ii in permissions[ key[i] ] )
+													{
+														if( permissions[ key[i] ][ ii ] )
+														{
+															out.push( permissions[ key[i] ][ ii ] );
+														}
+													}
+												}
+												else
+												{
+													out.push( permissions[ key[i] ] );
+												}
+											}
+										}
+										
+										if( out.length )
+										{
+											return out;
+										}
+									}
+									else if( permissions[ key ] )
 									{
 										return permissions[ key ];
 									}
@@ -6210,7 +6240,37 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 										
 										if( callback )
 										{
-											if( permissions[ key ] )
+											if( key && Array.isArray( key ) )
+											{
+												var out = [];
+												
+												for( var i in key )
+												{
+													if( key[i] && permissions[ key[i] ] )
+													{
+														if( Array.isArray( permissions[ key[i] ] ) )
+														{
+															for( var ii in permissions[ key[i] ] )
+															{
+																if( permissions[ key[i] ][ ii ] )
+																{
+																	out.push( permissions[ key[i] ][ ii ] );
+																}
+															}
+														}
+														else
+														{
+															out.push( permissions[ key[i] ] );
+														}
+													}
+												}
+												
+												if( out.length )
+												{
+													return callback( out );
+												}
+											}
+											else if( permissions[ key ] )
 											{
 												return callback( permissions[ key ] );
 											}
@@ -6414,8 +6474,8 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		}
 	}
 	// Used cached data
-	else if( packet.cachedAppData )
-	{	
+	else if( packet.cachedAppData && packet.cachedAppData.js )
+	{
 		var style = document.createElement( 'style' );
 		style.innerHTML = packet.cachedAppData.css;
 		head.appendChild( style );
@@ -6469,9 +6529,19 @@ function CreateSlider( inputField, flags )
 	g.appendChild( b );
 	d.appendChild( g );
 	
+	var gauge = null;
+	
 	if( !flags ) flags = {};
-	if( !flags.min ) flags.min = 0;
-	if( !flags.max ) flags.max = 100;
+	if( !flags.min  ) flags.min = 0;
+	if( !flags.max  ) flags.max = 100;
+	if( !flags.type ) flags.type = 'default';
+	
+	if( flags.type == 'volume' )
+	{
+		gauge = document.createElement( 'div' );
+		gauge.className = 'SliderGauge';
+		g.appendChild( gauge );
+	}
 	
 	if( inputField.getAttribute( 'min' ) )
 		flags.min = parseInt( inputField.getAttribute( 'min' ) );
@@ -6498,10 +6568,18 @@ function CreateSlider( inputField, flags )
 		if( !flags || !flags.vertical )
 		{
 			b.style.left = Math.floor( ( ( val - flags.min ) / flags.max ) * ( GetElementWidth( g ) - b.offsetWidth ) ) + 'px';
+			if( gauge )
+			{
+				gauge.style.width = parseInt( b.style.left ) + 'px';
+			}
 		}
 		else
 		{
 			b.style.top = Math.floor( ( ( val - flags.min ) / flags.max ) * ( GetElementHeight( g ) - b.offsetHeight ) ) + 'px';
+			if( gauge )
+			{
+				gauge.style.height = parseInt( b.style.top ) + 'px';
+			}
 		}
 		if( inputField.getAttribute( 'onchange' ) )
 		{
@@ -6526,6 +6604,10 @@ function CreateSlider( inputField, flags )
 			else if( x + b.offsetWidth >= GetElementWidth( g ) )
 				x = GetElementWidth( g ) - b.offsetWidth;
 			b.style.left = x + 'px';
+			if( gauge )
+			{
+				gauge.style.width = x + 'px';
+			}
 			inputField.value = Math.floor( ( x / ( GetElementWidth( g ) - b.offsetWidth ) * ( flags.max - flags.min ) ) - flags.min ) + flags.min;
 		}
 		else
@@ -6535,6 +6617,10 @@ function CreateSlider( inputField, flags )
 			if( y + b.offsetHeight > GetElementHeight( g ) )
 				y = GetElementHeight( g ) - b.offsetHeight;
 			b.style.top = y + 'px';
+			if( gauge )
+			{
+				gauge.style.height = y + 'px';
+			}
 			inputField.value = Math.floor( ( y / ( GetElementHeight( g ) - b.offsetHeight ) * ( flags.max - flags.min ) ) - flags.min ) + flags.min;
 		}
 		if( inputField.getAttribute( 'onchange' ) )
