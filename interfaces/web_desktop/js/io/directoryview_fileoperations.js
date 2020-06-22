@@ -151,7 +151,7 @@ DirectoryView.prototype.ShowShareDialog = function( elements, mode )
 							}
 							// Apply current sharing info
 							eles = v.getElementsByClassName( 'DoShare' );
-							eles[0].onclick = function()
+							eles[0].onclick = function( she )
 							{
 								let itms = v.getElementsByClassName( 'ShareItem' );
 								let groups = [];
@@ -175,35 +175,56 @@ DirectoryView.prototype.ShowShareDialog = function( elements, mode )
 									}
 								}
 								let sharingLen = out.length;
-								for( let h = 0; h < out.length; h++ )
+								if( groups.length || users.length )
 								{
-									let sh = new Module( 'system' );
-									sh.onExecuted = function( she, shd )
+									for( let h = 0; h < out.length; h++ )
 									{
-										sharingLen--;
-										if( sharingLen == 0 )
+										let sh = new Module( 'system' );
+										sh.onExecuted = function( she, shd )
 										{
-											self.HideShareDialog();
-											self.window.refresh();
+											sharingLen--;
+											if( sharingLen == 0 )
+											{
+												self.HideShareDialog();
+												self.window.refresh();
+											}
 										}
+										sh.execute( 'setfileshareinfo', { path: out[h].fileInfo.ExternPath ? out[h].fileInfo.ExternPath : out[h].fileInfo.Path, items: { group: groups, user: users } } );
 									}
-									sh.execute( 'setfileshareinfo', { path: out[h].fileInfo.ExternPath ? out[h].fileInfo.ExternPath : out[h].fileInfo.Path, items: { group: groups, user: users } } );
+								}
+								else
+								{
+									Alert( i18n( 'i18n_nothing_shared' ), i18n( 'i18n_please_select_users_groups' ) );
+									return;
 								}
 							}
 						
 							eles = v.getElementsByClassName( 'ShareItem' );
-							for( let z = 0; z < eles.length; z++ )
+							if( eles.length )
 							{
-								eles[ z ].onclick = function()
+								for( let z = 0; z < eles.length; z++ )
 								{
-									if( this.classList.contains( 'Selected' ) )
+									eles[ z ].onclick = function()
 									{
-										this.classList.remove( 'Selected' );
+										if( this.classList.contains( 'Selected' ) )
+										{
+											this.classList.remove( 'Selected' );
+										}
+										else
+										{
+											this.classList.add( 'Selected' );
+										}
 									}
-									else
-									{
-										this.classList.add( 'Selected' );
-									}
+								}
+							}
+							else
+							{
+								let dm = v.getElementsByClassName( 'Workgroups_and_users' );
+								if( dm )
+								{
+									let p = document.createElement( 'p' );
+									p.innerHTML = i18n( 'i18n_no_users_or_groups' );
+									dm[0].appendChild( p );
 								}
 							}
 							
@@ -291,18 +312,26 @@ DirectoryView.prototype.doCopyOnElement = function( eles, e )
 		{
 			let mode = finf.IconLabel == 'UserShare' ? 'user' : 'group';
 			let sharingLen = eles.length;
-			for( let h = 0; h < eles.length; h++ )
+			if( sharingLen )
 			{
-				let sh = new Module( 'system' );
-				sh.onExecuted = function( she, shd )
+				for( let h = 0; h < eles.length; h++ )
 				{
-					sharingLen--;
-					if( sharingLen == 0 )
+					let sh = new Module( 'system' );
+					sh.onExecuted = function( she, shd )
 					{
-						dview.content.refresh();
+						sharingLen--;
+						if( sharingLen == 0 )
+						{
+							dview.content.refresh();
+						}
 					}
+					sh.execute( 'setfileshareinfo', { path: eles[h].fileInfo.Path, share: finf.Path, type: mode } );
 				}
-				sh.execute( 'setfileshareinfo', { path: eles[h].fileInfo.Path, share: finf.Path, type: mode } );
+			}
+			else
+			{
+				Alert( i18n( 'i18n_nothing_shared' ), i18n( 'i18n_please_select_users_groups' ) );
+				return;
 			}
 		}
 		// Directly on the shared drive
