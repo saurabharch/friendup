@@ -9917,15 +9917,14 @@ function ShowEula( accept, cbk )
 	f.onLoad = function( data )
 	{
 		d.innerHTML = data;
-<<<<<<< HEAD
+
 		ge( 'FriendScreenOverlay' ).classList.add( 'EULA' );
-=======
+
 		// Tell app we can show ourselves!
 		if( window.friendApp && window.friendApp.reveal )
 		{
 			friendApp.reveal();
-		}		
->>>>>>> master
+		}
 	}
 	f.load();
 }

@@ -40,12 +40,7 @@ var ScreenOverlay = {
 		if( this.debug )
 		{
 			this.enableDebug();
-<<<<<<< HEAD
 		}
-		console.log( 'EULA SHOW' );
-=======
-		}	
->>>>>>> master
 	},
 	// Trick hide
 	invisible: function()
