@@ -144,6 +144,22 @@ Http *DeviceMWebRequest( void *m, char **urlpath, Http* request, UserSession *lo
 	SystemBase *l = (SystemBase *)m;
 	Http *response = NULL;
 	
+	// No urlpath..
+	// TODO: Give this a unique error message..
+	if( !urlpath || !urlpath[ 1 ] )
+	{
+		struct TagItem tags[] = {
+			{ HTTP_HEADER_CONTENT_TYPE, (FULONG)StringDuplicate( DEFAULT_CONTENT_TYPE ) },
+			{ HTTP_HEADER_CONNECTION, (FULONG)StringDuplicate( "close" ) },
+			{ TAG_DONE, TAG_DONE }
+		};
+		response = HttpNewSimple( HTTP_200_OK, tags );
+		char dictmsgbuf[ 256 ];
+		snprintf( dictmsgbuf, sizeof(dictmsgbuf), "fail<!--separate-->{ \"response\": \"%s\", \"code\":\"%d\" }", l->sl_Dictionary->d_Msg[DICT_FUNCTION_NOT_FOUND], DICT_FUNCTION_NOT_FOUND );
+		HttpAddTextContent( response, dictmsgbuf );	
+		return response;
+	}
+	
 	/// @cond WEB_CALL_DOCUMENTATION
 	/**
 	* 
@@ -245,7 +261,7 @@ Http *DeviceMWebRequest( void *m, char **urlpath, Http* request, UserSession *lo
 		response = HttpNewSimple( HTTP_200_OK,  tags );
 		
 		HashmapElement *el = HttpGetPOSTParameter( request, "devname" );
-		if( el != NULL ) devname = (char *)el->data;
+		if( el != NULL ) devname = (char *)el->hme_Data;
 		
 		int success = -1;
 		char *resultstring = NULL;
@@ -464,12 +480,12 @@ f.Name ASC";
 		}
 		
 		HashmapElement *el = HttpGetPOSTParameter( request, "devname" );
-		if( !el ) el = HashmapGet( request->query, "devname" );
+		if( !el ) el = HashmapGet( request->http_Query, "devname" );
 		
 		if( el != NULL )
 		{
 			char *ldevname = NULL;
-			devname = (char *)el->data;
+			devname = (char *)el->hme_Data;
 			
 			if( devname != NULL && ( ldevname = FCalloc( strlen( devname ) + 50, sizeof(char) ) ) != NULL )
 			{
@@ -498,7 +514,7 @@ f.Name ASC";
 		el = HttpGetPOSTParameter( request, "path" );
 		if( el != NULL )
 		{
-			path = (char *)el->data;
+			path = (char *)el->hme_Data;
 			if( path != NULL )
 			{
 				char *lpath = NULL;
@@ -515,16 +531,16 @@ f.Name ASC";
 		el = HttpGetPOSTParameter( request, "enc" );
 		if( el != NULL )
 		{
-			if( (char *)el->data != NULL )
+			if( (char *)el->hme_Data != NULL )
 			{
-				enc = (char *)el->data;
+				enc = (char *)el->hme_Data;
 			}
 		}
 		
 		el = HttpGetPOSTParameter( request, "type" );
 		if( el != NULL )
 		{
-			type = (char *)el->data;
+			type = (char *)el->hme_Data;
 		}
 		
 		int mountError = 0;
@@ -546,21 +562,21 @@ f.Name ASC";
 			char *port = NULL;
 			
 			el = HttpGetPOSTParameter( request, "execute" );
-			if( el != NULL ) execute = ( char *)el->data;
+			if( el != NULL ) execute = ( char *)el->hme_Data;
 			
 			el = HttpGetPOSTParameter( request, "visible" );
-			if( el != NULL ) visible = ( char *)el->data;
+			if( el != NULL ) visible = ( char *)el->hme_Data;
 			
 			el = HttpGetPOSTParameter( request, "Server" );
 			if( el != NULL )
 			{
-				host = (char *)el->data;
+				host = (char *)el->hme_Data;
 			}
 			
 			el = HttpGetPOSTParameter( request, "Port" );
 			if( el != NULL )
 			{
-				port = (char *)el->data;
+				port = (char *)el->hme_Data;
 			}
 			
 			//
@@ -571,33 +587,24 @@ f.Name ASC";
 			el = HttpGetPOSTParameter( request, "module" );
 			if( el != NULL )
 			{
-				module = (char *)el->data;
+				module = (char *)el->hme_Data;
 			}
 			
 			el = HttpGetPOSTParameter( request, "userid" );
 			if( el != NULL )
 			{
 				char *next;
-				userID = (FLONG)strtol(( char *)el->data, &next, 0);
+				userID = (FLONG)strtol(( char *)el->hme_Data, &next, 0);
 			}
 			
 			el = HttpGetPOSTParameter( request, "usergroupid" );
 			if( el != NULL )
 			{
 				char *next;
-				FULONG locid = (FLONG)strtol(( char *)el->data, &next, 0);
+				FULONG locid = (FLONG)strtol(( char *)el->hme_Data, &next, 0);
 				if( locid > 0 )
 				{
-					UserGroup *lg = l->sl_UGM->ugm_UserGroups;
-					while( lg != NULL )
-					{
-						if( locid == lg->ug_ID )
-						{
-							usrgrp = lg;
-							break;
-						}
-						lg = (UserGroup *)lg->node.mln_Succ;
-					}
+					usrgrp = UGMGetGroupByID( l->sl_UGM, locid );
 				}
 			}
 			
@@ -615,12 +622,12 @@ f.Name ASC";
 				el = HttpGetPOSTParameter( request, "authid" );
 				if( el != NULL )
 				{
-					authid = el->data;
+					authid = el->hme_Data;
 				}
 				el = HttpGetPOSTParameter( request, "args" );
 				if( el != NULL )
 				{
-					args = el->data;
+					args = el->hme_Data;
 					//args = UrlDecodeToMem( el->data );
 				}
 				
@@ -868,7 +875,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 		if( el != NULL )
 		{
 			char *next;
-			userID = (FLONG)strtol(( char *)el->data, &next, 0);
+			userID = (FLONG)strtol(( char *)el->hme_Data, &next, 0);
 		}
 		else
 		{
@@ -876,13 +883,13 @@ AND LOWER(f.Name) = LOWER('%s')",
 		}
 		
 		el = HttpGetPOSTParameter( request, "devname" );
-		if( !el ) el = HashmapGet( request->query, "devname" );
+		if( !el ) el = HashmapGet( request->http_Query, "devname" );
 		
 		// get device name from string
 		if( el != NULL )
 		{
 			char *ldevname = NULL;
-			devname = (char *)el->data;
+			devname = (char *)el->hme_Data;
 			
 			if( devname != NULL && ( ldevname = FCalloc( strlen( devname ) + 50, sizeof(char) ) ) != NULL )
 			{
@@ -937,13 +944,13 @@ AND LOWER(f.Name) = LOWER('%s')",
 					el = HttpGetPOSTParameter( request, "authid" );
 					if( el != NULL )
 					{
-						authid = el->data;
+						authid = el->hme_Data;
 					}
 					el = HttpGetPOSTParameter( request, "args" );
 					if( el != NULL )
 					{
-						args = el->data;
-						//args = UrlDecodeToMem( el->data );
+						args = el->hme_Data;
+						//args = UrlDecodeToMem( el->hme_Data );
 					}
 					DEBUG("UserID %lu\n", userID );
 			
@@ -1173,7 +1180,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 		if( el != NULL )
 		{
 			char *ldevname = NULL;
-			devname = (char *)el->data;
+			devname = (char *)el->hme_Data;
 			
 			if( devname != NULL && ( ldevname = FCalloc( strlen( devname ) + 50, sizeof(char) ) ) != NULL )
 			{
@@ -1317,19 +1324,19 @@ AND LOWER(f.Name) = LOWER('%s')",
 		HashmapElement *el = HttpGetPOSTParameter( request, "devname" );
 		if( el != NULL )
 		{
-			devname = (char *)el->data;
+			devname = (char *)el->hme_Data;
 		}
 		
 		el = HttpGetPOSTParameter( request, "username" );
 		if( el != NULL )
 		{
-			username = (char *)el->data;
+			username = (char *)el->hme_Data;
 		}
 		
 		el = HttpGetPOSTParameter( request, "usergroup" );
 		if( el != NULL )
 		{
-			usergroupname = (char *)el->data;
+			usergroupname = (char *)el->hme_Data;
 		}
 		
 		if( devname == NULL || username == NULL )
@@ -1358,13 +1365,7 @@ AND LOWER(f.Name) = LOWER('%s')",
 				}
 			}
 			
-			LIST_FOR_EACH( l->sl_UGM->ugm_UserGroups, usergroup, UserGroup * )
-			{
-				if( strcmp( usergroupname, usergroup->ug_Name ) == 0 )
-				{
-					break;
-				}
-			}
+			usergroup = UGMGetGroupByName( l->sl_UGM, usergroupname );
 			
 			if( user == NULL )
 			{
@@ -1412,16 +1413,8 @@ AND LOWER(f.Name) = LOWER('%s')",
 					{
 						DEBUG("[DeviceMWebRequest] Devices were not mounted for user. They will be mounted now\n");
 					
-						SQLLibrary *sqllib  = l->LibrarySQLGet( l );
-						if( sqllib != NULL )
-						{
-							UserDeviceMount( l, sqllib, user, 0, TRUE, &error, TRUE );
-							l->LibrarySQLDrop( l, sqllib );
-						}
-						else
-						{
-							FERROR("Cannot get sql.library slot\n");
-						}
+						UserDeviceMount( l, user, 0, TRUE, &error, TRUE );
+
 					}
 				
 					File *file = FCalloc( 1, sizeof( File ) );
@@ -1539,95 +1532,99 @@ AND LOWER(f.Name) = LOWER('%s')",
 				// get information about user drives
 				//
 				
-				while( dev != NULL )
+				if( FRIEND_MUTEX_LOCK( &( curusr->u_Mutex ) ) == 0 )
 				{
-					FHandler *sys = (FHandler *)dev->f_FSys;
-					char *sysname = NULL;
-					if( sys != NULL )
+					while( dev != NULL )
 					{
-						sysname = sys->Name;
-					}
-					Filesystem *fsys = ( Filesystem *)dev->f_DOSDriver;
-					
-					EscapeConfigFromString( dev->f_Config, &configEscaped, &executeCmd );
-					
-					memset( tmp, '\0', TMP_SIZE );
-					
-					FBOOL isLimited = FALSE;
-					
-					if( UMUserIsAdmin( l->sl_UM, request, loggedSession->us_User ) == FALSE )
-					{
-						if( strcmp( dev->f_FSysName, "Local" ) == 0 )
+						FHandler *sys = (FHandler *)dev->f_FSys;
+						char *sysname = NULL;
+						if( sys != NULL )
 						{
-							isLimited = TRUE;
+							sysname = sys->Name;
 						}
-					}
+						Filesystem *fsys = ( Filesystem *)dev->f_DOSDriver;
 					
-					FillDeviceInfo( devnr, tmp, TMP_SIZE_MIN1, dev->f_Mounted, dev->f_Name, dev->f_FSysName, dev->f_Path, sysname, configEscaped, dev->f_Visible, executeCmd, isLimited, dev->f_DevServer, dev->f_DevPort, dev->f_UserGroupID );
+						EscapeConfigFromString( dev->f_Config, &configEscaped, &executeCmd );
 					
-					{
-						char inttmp[ 256 ];
-						int addlen = 0;
-						if( bsMountedDrives->bs_Size == 0 )
+						memset( tmp, '\0', TMP_SIZE );
+					
+						FBOOL isLimited = FALSE;
+					
+						if( UMUserIsAdmin( l->sl_UM, request, loggedSession->us_User ) == FALSE )
 						{
-							addlen = snprintf( inttmp, sizeof( inttmp ), "%lu", dev->f_ID );
+							if( strcmp( dev->f_FSysName, "Local" ) == 0 )
+							{
+								isLimited = TRUE;
+							}
+						}
+					
+						FillDeviceInfo( devnr, tmp, TMP_SIZE_MIN1, dev->f_Mounted, dev->f_Name, dev->f_FSysName, dev->f_Path, sysname, configEscaped, dev->f_Visible, executeCmd, isLimited, dev->f_DevServer, dev->f_DevPort, dev->f_UserGroupID );
+					
+						{
+							char inttmp[ 256 ];
+							int addlen = 0;
+							if( bsMountedDrives->bs_Size == 0 )
+							{
+								addlen = snprintf( inttmp, sizeof( inttmp ), "%lu", dev->f_ID );
+							}
+							else
+							{
+								addlen = snprintf( inttmp, sizeof( inttmp ), ",%lu", dev->f_ID );
+							}
+							BufStringAddSize( bsMountedDrives, inttmp, addlen );
+						}
+						/*
+						if( devnr == 0 )
+						{
+							snprintf( tmp, TMP_SIZE_MIN1, "{\"Name\":\"%s\",\"Type\":\"%s\",\"Path\":\"%s\",\"FSys\":\"%s\",\"Config\":\"%s\",\"Visible\":\"%s\",\"Execute\":\"%s\",\"IsLimited\":\"%d\",\"Server\":\"%s\",\"Port\":\"%d\",\"GroupID\":\"%lu\"}\n", 
+								dev->f_Name ? dev->f_Name : "", 
+								dev->f_FSysName ? dev->f_FSysName : "", 
+								dev->f_Path ? dev->f_Path : "",
+								sys && sys->Name ? sys->Name : "",
+								configEscaped ? configEscaped: "{}",
+								dev->f_Visible == 1 ? "true" : "false",
+								executeCmd != NULL && strlen( executeCmd ) ? executeCmd : "", 
+								isLimited,
+								dev->f_DevServer ? dev->f_DevServer : "",
+								dev->f_DevPort,
+								dev->f_UserGroupID
+							);
 						}
 						else
 						{
-							addlen = snprintf( inttmp, sizeof( inttmp ), ",%lu", dev->f_ID );
+							snprintf( tmp, TMP_SIZE_MIN1, ",{\"Name\":\"%s\",\"Type\":\"%s\",\"Path\":\"%s\",\"FSys\":\"%s\",\"Config\":\"%s\",\"Visible\":\"%s\",\"Execute\":\"%s\",\"IsLimited\":\"%d\",\"Server\":\"%s\",\"Port\":\"%d\",\"GroupID\":\"%lu\"}\n", 
+								dev->f_Name ? dev->f_Name : "",
+								dev->f_FSysName ? dev->f_FSysName : "", 
+								dev->f_Path ? dev->f_Path : "",
+								sys && sys->Name ? sys->Name : "",
+								configEscaped ? configEscaped: "{}",
+								dev->f_Visible == 1 ? "true" : "false",
+								executeCmd != NULL && strlen( executeCmd ) ? executeCmd : "",
+								isLimited,
+								dev->f_DevServer ? dev->f_DevServer : "",
+								dev->f_DevPort,
+								dev->f_UserGroupID
+							);
 						}
-						BufStringAddSize( bsMountedDrives, inttmp, addlen );
-					}
-					/*
-					if( devnr == 0 )
-					{
-						snprintf( tmp, TMP_SIZE_MIN1, "{\"Name\":\"%s\",\"Type\":\"%s\",\"Path\":\"%s\",\"FSys\":\"%s\",\"Config\":\"%s\",\"Visible\":\"%s\",\"Execute\":\"%s\",\"IsLimited\":\"%d\",\"Server\":\"%s\",\"Port\":\"%d\",\"GroupID\":\"%lu\"}\n", 
-							dev->f_Name ? dev->f_Name : "", 
-							dev->f_FSysName ? dev->f_FSysName : "", 
-							dev->f_Path ? dev->f_Path : "",
-							sys && sys->Name ? sys->Name : "",
-							configEscaped ? configEscaped: "{}",
-							dev->f_Visible == 1 ? "true" : "false",
-							executeCmd != NULL && strlen( executeCmd ) ? executeCmd : "", 
-							isLimited,
-							dev->f_DevServer ? dev->f_DevServer : "",
-							dev->f_DevPort,
-							dev->f_UserGroupID
-						);
-					}
-					else
-					{
-						snprintf( tmp, TMP_SIZE_MIN1, ",{\"Name\":\"%s\",\"Type\":\"%s\",\"Path\":\"%s\",\"FSys\":\"%s\",\"Config\":\"%s\",\"Visible\":\"%s\",\"Execute\":\"%s\",\"IsLimited\":\"%d\",\"Server\":\"%s\",\"Port\":\"%d\",\"GroupID\":\"%lu\"}\n", 
-							dev->f_Name ? dev->f_Name : "",
-							dev->f_FSysName ? dev->f_FSysName : "", 
-							dev->f_Path ? dev->f_Path : "",
-							sys && sys->Name ? sys->Name : "",
-							configEscaped ? configEscaped: "{}",
-							dev->f_Visible == 1 ? "true" : "false",
-							executeCmd != NULL && strlen( executeCmd ) ? executeCmd : "",
-							isLimited,
-							dev->f_DevServer ? dev->f_DevServer : "",
-							dev->f_DevPort,
-							dev->f_UserGroupID
-						);
-					}
-					*/
+						*/
 					
-					if( executeCmd )
-					{
-						FFree( executeCmd );
-						executeCmd = NULL;
-					}
-					if( configEscaped )
-					{
-						FFree( configEscaped );
-						configEscaped = NULL;
-					}
+						if( executeCmd )
+						{
+							FFree( executeCmd );
+							executeCmd = NULL;
+						}
+						if( configEscaped )
+						{
+							FFree( configEscaped );
+							configEscaped = NULL;
+						}
 					
-					BufStringAdd( bs, tmp );
+						BufStringAdd( bs, tmp );
 					
-					devnr++;
-					dev = (File *)dev->node.mln_Succ;
+						devnr++;
+						dev = (File *)dev->node.mln_Succ;
+					}
+					FRIEND_MUTEX_UNLOCK( &( curusr->u_Mutex ) );
 				}
 				
 				//
@@ -1766,57 +1763,6 @@ AND LOWER(f.Name) = LOWER('%s')",
 					ugl = (UserGroupLink *)ugl->node.mln_Succ;
 				}
 				
-				// now get all devices from database which are not mounted
-				//TODO we should get devices from DB assigned to user, to his groups and not mounted
-				/*
-				SQLLibrary *sqllib  = l->LibrarySQLGet( l );
-				if( sqllib != NULL )
-				{
-					int entries = 0;
-					int querysize = 256 + bsMountedDrives->bs_Size;
-					
-					char *query = FMalloc( querysize );
-					if( query != NULL )
-					{
-						sqllib->SNPrintF( sqllib, query, querysize, " ID NOT IN(%s) AND UserID", bsMountedDrives->bs_Buffer );
-						DEBUG("[DEVICE/LIST] sql: %s\n", query );
-					
-						Filesystem *rootdev = sqllib->Load( sqllib, FilesystemDesc, query, &entries );
-						if( rootdev != NULL )
-						{
-							Filesystem *locdev = rootdev;
-							while( locdev != NULL )
-							{
-								EscapeConfigFromString( locdev->fs_Config, &configEscaped, &executeCmd );
-								
-								FillDeviceInfo( devnr, tmp, TMP_SIZE_MIN1, locdev->fs_Mounted, locdev->fs_Name, locdev->fs_Type, locdev->fs_Path, NULL, configEscaped, 0, executeCmd, 0, locdev->fs_Server, locdev->fs_Port, locdev->fs_GroupID );
-								//locdev->fs_Config
-								BufStringAdd( bs, tmp );
-								
-								if( executeCmd )
-								{
-									FFree( executeCmd );
-									executeCmd = NULL;
-								}
-								if( configEscaped )
-								{
-									FFree( configEscaped );
-									configEscaped = NULL;
-								}
-								
-								locdev = (Filesystem *)locdev->node.mln_Succ;
-							}
-							
-							FilesystemDeleteAll( rootdev );
-						
-							//DEBUG( "[DeviceMWebRequest] We now have information: %s (query: %s) - name: %s\n", rootdev->f_Config, query, rootdev->f_Name );
-						}
-						FFree( query );
-					}
-					l->LibrarySQLDrop( l, sqllib );
-				}
-				*/
-				
 				FFree( tmp );
 				
 				BufStringAdd( bs, "]" );
@@ -1947,25 +1893,25 @@ AND LOWER(f.Name) = LOWER('%s')",
 		HashmapElement *el = HttpGetPOSTParameter( request, "devname" );
 		if( el != NULL )
 		{
-			devname = UrlDecodeToMem(( char *)el->data );
+			devname = UrlDecodeToMem(( char *)el->hme_Data );
 		}
 		
 		el = HttpGetPOSTParameter( request, "config" );
 		if( el != NULL )
 		{
-			config = UrlDecodeToMem(( char *)el->data );
+			config = UrlDecodeToMem(( char *)el->hme_Data );
 		}
 		
 		el = HttpGetPOSTParameter( request, "descryption" );
 		if( el != NULL )
 		{
-			descrypt = UrlDecodeToMem(( char *)el->data );
+			descrypt = UrlDecodeToMem(( char *)el->hme_Data );
 		}
 		
 		el = HttpGetPOSTParameter( request, "id" );
 		{
 			char *next;
-			id = (FLONG)strtol(( char *)el->data, &next, 0);
+			id = (FLONG)strtol(( char *)el->hme_Data, &next, 0);
 		}
 		
 		if( id >= 0 )
@@ -2051,11 +1997,10 @@ AND LOWER(f.Name) = LOWER('%s')",
 						sqllib->QueryWithoutResults( sqllib, bs->bs_Buffer );
 						
 						HttpAddTextContent( response, "ok<!--separate-->{ \"Result\": \"Database updated\"}" );
-						
-						l->LibrarySQLDrop( l, sqllib );
 					}
 					
 					BufStringDelete( bs );
+					l->LibrarySQLDrop( l, sqllib );
 				}
 				else	// bs == NULL
 				{

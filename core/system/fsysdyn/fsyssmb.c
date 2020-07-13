@@ -687,7 +687,7 @@ int FileRead( struct File *f, char *buffer, int rsize )
 		
 		if( f->f_Stream == TRUE )
 		{
-			sd->sb->sl_SocketInterface.SocketWrite( f->f_Socket, buffer, (FLONG)result );
+			f->f_Socket->s_Interface->SocketWrite( f->f_Socket, buffer, (FLONG)result );
 		}
 		
 		if( result == 0 )	// if smb return 0 then its the end of the file
@@ -1134,7 +1134,7 @@ void FillStatSAMBA( BufString *bs, struct stat *s, File *d, const char *path )
 	}
 
 	BufStringAdd( bs, tmp );
-	snprintf( tmp, 1023, "\"Filesize\": %d,",(int) s->st_size );
+	snprintf( tmp, 1023, "\"Filesize\": %ld,", s->st_size );
 	BufStringAdd( bs, tmp );
 	
 	char *timeStr = FCalloc( 40, sizeof( char ) );

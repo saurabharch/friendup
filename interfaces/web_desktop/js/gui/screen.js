@@ -444,7 +444,7 @@ Screen = function ( flags, initObject )
 		var t = e.target ? e.target : e.srcElement;
 		
 		// Clicking on the extra widget
-		if( t.classList && t.classList.contains( 'Extra' ) )
+		if( t.classList && t.classList.contains( 'Extra' ) && ( !window.Workspace || !window.Workspace.isSingleTask ) )
 		{
 			Workspace.calendarClickEvent();
 		}
@@ -1028,12 +1028,26 @@ Screen = function ( flags, initObject )
 			offline.innerHTML = i18n('i18n_server_disconnected');
 			this.div.appendChild( offline );	
 		}
+		
+		if( window.Workspace && Workspace.notifyAppsOfState )
+		{
+			Workspace.notifyAppsOfState( {
+				state: 'offline'
+			} );
+		}
 	}
 	
 	this.hideOfflineMessage = function()
 	{
 		var offline = this.div.getElementsByClassName( 'Offline' )[0];
 		if( offline ) offline.style.display = 'none';
+		
+		if( window.Workspace && Workspace.notifyAppsOfState )
+		{
+			Workspace.notifyAppsOfState( {
+				state: 'online'
+			} );
+		}
 	}
 	
 	// Go through flags

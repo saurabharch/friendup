@@ -32,8 +32,20 @@ function RemoveFromExecutionQueue( app )
 }
 
 // Load a javascript application into a sandbox
-function ExecuteApplication( app, args, callback )
+function ExecuteApplication( app, args, callback, retries )
 {
+	// Just nothing.
+	if( !app ) return;
+	
+	// If we don't have any cached basics, wait a bit
+	if( typeof( _applicationBasics ) == 'undefined' || !_applicationBasics.js )
+	{
+		if( retries == 3 ) return console.log( 'Could not execute app: ' + app );
+		return setTimeout( function()
+		{
+			ExecuteApplication( app, args, callback, !retries ? 1 : retries++ );
+		}, 125 );
+	}
 	var appName = app;
 	if( app.indexOf( ':' ) > 0 )
 	{
@@ -45,7 +57,8 @@ function ExecuteApplication( app, args, callback )
 	// You need to wait with opening apps until they are loaded by app name
 	if( _executionQueue[ appName ] )
 	{
-		callback( false, { response: false, message: 'Already run.', data: 'executed' } );
+		if( callback )
+			callback( false, { response: false, message: 'Already run.', data: 'executed' } );
 		return;
 	}
 
@@ -95,10 +108,12 @@ function ExecuteApplication( app, args, callback )
 		{
 			_ActivateWindow( Friend.singleInstanceApps[ appName ].windows[ a ]._window.parentNode );
 			_WindowToFront( Friend.singleInstanceApps[ appName ].windows[ a ]._window.parentNode );
-			callback( false, { response: false, message: 'Already run.', data: 'executed' } );
+			if( callback )
+				callback( false, { response: false, message: 'Already run.', data: 'executed' } );
 			return;
 		}
-		callback( false, { response: false, message: 'Already run.', data: 'executed' } );
+		f( callback )
+			callback( false, { response: false, message: 'Already run.', data: 'executed' } );
 		return;
 	}
 	// Only allow one app instance in mobile!
@@ -191,14 +206,12 @@ function ExecuteApplication( app, args, callback )
 		{
 			//
 		}
-
-		// Remove blocker
-		RemoveFromExecutionQueue( appName );
-		// console.log( 'Test3: Executed. Removing appqueue: ' + appName );
-		
+	
 		if( r == 'activate' )
 		{
 			ActivateApplication( app, conf );
+			// Remove blocker
+			RemoveFromExecutionQueue( appName );
 			if( callback ) callback( false );
 			
 			return false;
@@ -221,6 +234,8 @@ function ExecuteApplication( app, args, callback )
 				{
 					if( !callback( { error: 2, errorMessage: i18n( 'install_question_title' ) } ) )
 					{
+						// Remove blocker
+						RemoveFromExecutionQueue( appName );
 						return;
 					}
 				}
@@ -245,7 +260,6 @@ function ExecuteApplication( app, args, callback )
 					if( hideView )
 					{
 						InstallApplication( app );
-
 					}
 				}
 				f.load();
@@ -255,22 +269,28 @@ function ExecuteApplication( app, args, callback )
 				// Just use callback
 				if( callback )
 				{
+					// Remove blocker
+					RemoveFromExecutionQueue( appName );
 					return callback( { error: 1, errorMessage: i18n( 'application_not_signed' ) } );
 				}
 				Ac2Alert( i18n( 'application_not_signed' ) );
 			}
 			else if( r == 'fail' && conf && conf.response == 'application not validated' )
-			{
+			{				
 				if( callback )
 				{
+					// Remove blocker
+					RemoveFromExecutionQueue( appName );
 					return callback( { error: 1, errorMessage: i18n( 'application_not_validated' ) } );
 				}
 				Ac2Alert( i18n( 'application_not_validated' ) );
 			}
 			else
-			{
+			{				
 				if( callback )
 				{
+					// Remove blocker
+					RemoveFromExecutionQueue( appName );
 					return callback( { error: 1, errorMessage: i18n( 'application_not_found' ) } );
 				}
 				Ac2Alert( i18n( 'application_not_found' ) );
@@ -287,6 +307,8 @@ function ExecuteApplication( app, args, callback )
 			// Kill app if it is there
 			KillApplication( appName );
 			
+			// Remove blocker
+			RemoveFromExecutionQueue( appName );		
 			return false;
 		}
 
@@ -297,11 +319,15 @@ function ExecuteApplication( app, args, callback )
 			{
 				if( callback )
 				{
+					// Remove blocker
+					RemoveFromExecutionQueue( appName );
 					return callback( { error: 1, errorMessage: 'Can not run v0 applications.' } );
 				}
 				Ac2Alert( 'Can not run v0 applications.' );
 				if( callback ) callback( false );
 				
+				// Remove blocker
+				RemoveFromExecutionQueue( appName );
 				return false;
 			}
 
@@ -364,6 +390,8 @@ function ExecuteApplication( app, args, callback )
 			{
 				if( conf.Init.indexOf( ':' ) > 0 && conf.Init.indexOf( '.jsx' ) > 0 )
 				{
+					// Remove blocker
+					RemoveFromExecutionQueue( appName );
 					return ExecuteJSXByPath( conf.Init, args, callback, conf );
 				}
 				// TODO: Check privileges of one app to launch another!
@@ -381,7 +409,7 @@ function ExecuteApplication( app, args, callback )
 						app + '&friendup=' + escape( Doors.runLevels[0].domain ), true );
 					j.onload = function()
 					{	
-						ws = this.rawData.split( 'src="/webclient/js/apps/api.js"' ).join( 'src="' + _applicationBasics.apiV1 + '"' );
+						let ws = this.rawData.split( 'src="/webclient/js/apps/api.js"' ).join( 'src="' + _applicationBasics.apiV1 + '"' );
 						ifr.src = URL.createObjectURL(new Blob([ws],{type:'text/html'}));
 					}
 					j.send();
@@ -389,6 +417,7 @@ function ExecuteApplication( app, args, callback )
 			}
 			else
 			{
+				// Same domain
 				ifr.src = sdomain + filepath + 'index.html?friendup=' + sdomain;
 			}
 
@@ -541,9 +570,6 @@ function ExecuteApplication( app, args, callback )
 			// Register application
 			ifr.onload = function()
 			{
-				// Clean blocker
-				RemoveFromExecutionQueue( appName );
-				
 				// Make sure pickup items are cleared
 				mousePointer.clear();
 				
@@ -555,7 +581,19 @@ function ExecuteApplication( app, args, callback )
 						callback = null;
 					}
 				} );
-
+				
+				// check for app
+				let fApp = null;
+				if ( window.friendApp )
+				{
+					const version = window.friendApp.get_version();
+					const platform = window.friendApp.get_platform();
+					fApp = {
+						version  : version,
+						platform : platform,
+					};
+				}
+				
 				// Args could be sent in JSON format, then try to give this on.
 				var oargs = args;
 				try
@@ -578,11 +616,11 @@ function ExecuteApplication( app, args, callback )
 					authId: ifr.authId,
 					args: oargs,
 					workspace: workspace,
+					friendApp : fApp,
 					dosDrivers: Friend.dosDrivers,
 					locale: Workspace.locale,
 					theme: Workspace.theme,
 					themeData: Workspace.themeData,
-					workspaceMode: Workspace.workspacemode,
 					filePath: sdomain + filepath,
 					domain:   sdomain,
 					registerCallback: cid,
@@ -637,11 +675,6 @@ function ExecuteApplication( app, args, callback )
 	var eo = { application: app, args: args };
 	if( Workspace.conf && Workspace.conf.authid )
 		eo.authid = Workspace.conf.authid;
-	m.onQueue = function()
-	{
-		// Clean blocker
-		RemoveFromExecutionQueue( appName );
-	}
 	m.execute( 'friendapplication', eo );
 	// console.log( 'Test3: Executing application: ' + app );
 }
@@ -1245,7 +1278,7 @@ function ExecuteJSX( data, app, args, path, callback, conf )
 					var o = {
 						command: 'quit',
 						filePath: '/webclient/jsx/',
-						domain:   sdomain
+						domain:   typeof( sdomain ) != 'undefined' ? sdomain : ''
 					};
 					this.contentWindow.postMessage( JSON.stringify( o ), '*' );
 				}
@@ -1361,7 +1394,14 @@ function ExecuteJSX( data, app, args, path, callback, conf )
 			}
 
 			// Add application iframe to body
-			AttachAppSandbox( ifr );
+			var iconPath = path;
+			if( iconPath.substr( -4, 4 ).toLowerCase() == '.jsx' )
+			{
+				iconPath = iconPath.split( '/' );
+				iconPath.pop();
+				iconPath = iconPath.join( '/' );
+			}
+			AttachAppSandbox( ifr, iconPath, 'friendpath' );
 
 			// Add application
 			Workspace.applications.push( ifr );
@@ -1388,8 +1428,10 @@ function ReplaceString( template, search, replace )
 };
 
 // Attach a sandbox
-function AttachAppSandbox( ifr, path )
+function AttachAppSandbox( ifr, path, pathType )
 {
+	if( !pathType ) pathType = 'default';
+	
 	var d = document.createElement( 'div' );
 	d.className = 'AppSandbox';
 	d.appendChild( ifr );
@@ -1405,7 +1447,9 @@ function AttachAppSandbox( ifr, path )
 	if( !path ) path = ifr.src.split( /\/[^/.]*\.html/ )[0];
 
 	var x = document.createElement( 'div' );
-	var icon = path.indexOf( '?' ) < 0 ? ( path + '/icon.png' ) : '/webclient/gfx/icons/64x64/mimetypes/application-x-javascript.png';
+	var icon = oicon = '/webclient/gfx/icons/64x64/mimetypes/application-x-javascript.png';
+	if( path.indexOf( '?' ) < 0 || path.indexOf( 'command=resource' ) > 0 )
+		icon = ( pathType == 'friendpath' ? oicon : ( path + '/icon.png' ) );
 	ifr.icon = icon;
 	x.style.backgroundImage = 'url(' + ifr.icon + ')';
 	x.className = 'Close';

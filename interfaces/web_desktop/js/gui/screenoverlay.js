@@ -40,8 +40,12 @@ var ScreenOverlay = {
 		if( this.debug )
 		{
 			this.enableDebug();
+<<<<<<< HEAD
 		}
 		console.log( 'EULA SHOW' );
+=======
+		}	
+>>>>>>> master
 	},
 	// Trick hide
 	invisible: function()
@@ -122,6 +126,22 @@ var ScreenOverlay = {
 				
 				// Make sure we update screen title and tray/tasks
 				PollTaskbar();
+				
+				// Initialize tutorials
+				if( !isMobile )
+				{
+					let tuts = new TutorialWidget( {
+						x: 'right',
+						y: 'bottom'
+					} );
+				}
+				
+				// Tell app we can show ourselves!
+				if( window.friendApp && window.friendApp.reveal )
+				{
+					friendApp.reveal();
+				}
+				
 			}, 250 );
 			return true;
 		}

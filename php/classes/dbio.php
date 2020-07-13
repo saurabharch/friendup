@@ -308,6 +308,7 @@ class DbTable
 						$value = str_replace( "'", "", $value );
 						if( $value == '' ) $value = 0;
 						return "'$value'";
+						
 					case 'datetime':
 					default:
 						$value = stripslashes( $value );
@@ -489,6 +490,8 @@ class DbIO extends DbTable
 	// Save data back into object
 	function Save()
 	{
+		global $Logger;
+		
 		if( !$this->_database )
 		{
 			$this->_lastError = 'No database connection.';

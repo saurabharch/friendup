@@ -36,7 +36,7 @@ window.loaded = false;
 window.applicationStarted = false;
 var __timeout = 200;
 
-if ( this.apijsHasExecuted )
+if( this.apijsHasExecuted )
 	throw new Error( 'api.js has already run, aborting' );
 
 this.apijsHasExecuted = true;
@@ -57,7 +57,13 @@ Friend.application = {
 		document.body.classList.add( 'activated' );
 		setTimeout( function()
 		{
+			document.body.style.willChange = 'opacity';
 			document.body.style.opacity = '';
+			document.body.style.pointerEvents = '';
+			setTimeout( function()
+			{
+				document.body.style.willChange = '';
+			}, 250 );
 		}, 100 );
 		Application.sendMessage( {
 			type: 'view',
@@ -1017,7 +1023,7 @@ function receiveEvent( event, queued )
 						var owner = ( arq.isHost ? '' : 'owner' );
 						// Send to others
 						var msg = {
-							path : 'system.library/app/send' + owner + '/',
+							path : 'system.library/sas/send' + owner + '/',
 							data : {
 								sasid : dataPacket.sasid,
 								msg: dataPacket.eventData
@@ -1157,6 +1163,11 @@ function receiveEvent( event, queued )
 									document.body.classList.remove( 'Scrolling' );
 								}
 							}
+							// Do we have a setFlag event?
+							if( w.onSetFlag )
+							{
+								w.onSetFlag( dataPacket.flag, dataPacket.value );
+							}
 						}
 						break;
 					case 'servermessage':
@@ -1272,12 +1283,10 @@ function receiveEvent( event, queued )
 			if( dataPacket.screenId ) Application.screenId = dataPacket.screenId;
 
 			// Make sure the base href is correct.
-			if( typeof( data ) != 'string' )
-				data = '';
-			var data = Friend.convertFriendPaths( dataPacket.data );
+			data = Friend.convertFriendPaths( dataPacket.data );
 
 			// For jquery etc
-			var m = '';
+			let m = '';
 			while( m = data.match( /\$\(document[^{]*?\{([^}]*?)\}\)/i ) )
 				data = data.split( m[0] ).join( '(' + m[1] + ')' );
 
@@ -1289,7 +1298,7 @@ function receiveEvent( event, queued )
 			{
 				try
 				{
-					var nw = parent.document.getElementById( dataPacket.parentSandboxId );
+					let nw = parent.document.getElementById( dataPacket.parentSandboxId );
 					if( parent != nw )
 						parentView = nw.contentWindow;
 				}
@@ -1483,10 +1492,10 @@ function receiveEvent( event, queued )
 					}
 					else if( f.onCall )
 					{
-						var firstPart = dataPacket.data.indexOf( '<!--separate-->' ) + ( '<!--separate-->' ).length;
-						var data = dataPacket.data.substr( firstPart, dataPacket.data.length - firstPart );
-						var resp = dataPacket.data.substr( 0, dataPacket.data.indexOf( '<!--separate-->' ) );
-						f.onCall( resp, data );
+						let firstPart = dataPacket.data.indexOf( '<!--separate-->' ) + ( '<!--separate-->' ).length;
+						let pdata = dataPacket.data.substr( firstPart, dataPacket.data.length - firstPart );
+						let resp = dataPacket.data.substr( 0, dataPacket.data.indexOf( '<!--separate-->' ) );
+						f.onCall( resp, pdata );
 					}
 					// For Module objects
 					else if ( f.onExecuted )
@@ -1712,13 +1721,13 @@ function receiveEvent( event, queued )
 					// Execute and give callback
 					if( DormantMaster.doors[ dataPacket.doorId ] )
 					{
-						var data = DormantMaster.doors[ dataPacket.doorId ].execute( dataPacket.dormantCommand, dataPacket.dormantArgs );
+						let ddata = DormantMaster.doors[ dataPacket.doorId ].execute( dataPacket.dormantCommand, dataPacket.dormantArgs );
 						Application.sendMessage( {
 							type: 'dormantmaster',
 							method: 'callback',
 							doorId: dataPacket.doorId,
 							callbackId: dataPacket.callbackId,
-							data: data
+							data: ddata
 						} );
 					}
 				}
@@ -2269,7 +2278,7 @@ function Widget( flags )
 
 function View( flags )
 {
-	var viewId = 'window_' + ( new Date() ).getTime() + '.' + Math.random();
+	let viewId = 'window_' + ( new Date() ).getTime() + '.' + Math.random();
 
 	// Proxy screens are virtual :)
 	if( flags.screen )
@@ -2279,7 +2288,7 @@ function View( flags )
 
 	this._flags = flags ? flags : {};
 
-	var msg = {
+	let msg = {
 		type:    'view',
 		data:    flags,
 		viewId: viewId
@@ -3037,6 +3046,7 @@ WebAudioLoader = function( filePath, callback )
 	this.audioGraph =
 	{
 		volume: 0.5,
+		metadata: false,
 		context: __audioContext,                                                //this is the container for your entire audio graph
 		bufferArray: [],
 		bufferArrayIndex: 0,
@@ -3181,7 +3191,7 @@ WebAudioLoader = function( filePath, callback )
 			this.source.stop();
 			this.bufferArrayIndex = 0;
 		}
-	}
+	};
 
 	// Do we need this?
 	this.audioGraph.source = this.audioGraph.context.createBufferSource();      //your buffer will sit here
@@ -3277,9 +3287,72 @@ WebAudioLoader = function( filePath, callback )
 		{
 			var request = new XMLHttpRequest();
 			request.responseType = 'arraybuffer';
-			request.onload = function( evt )
+			request.onload = function( evt, a1, c1, b1, d1, e1, f1, g1 )
 			{
 				var theData = request.response;
+			
+				// Try to get ID3 information
+				try
+				{
+					function parseID3( a, b, c, d, e, f, g, h )
+					{
+						DataView.prototype.str=function(a,b,c,d){//start,length,placeholder,placeholder
+							b=b||1;c=0;d='';for(;c<b;)d+=String.fromCharCode(this.getUint8(a+c++));return d
+						}
+						DataView.prototype.int=function(a){//start
+							return (this.getUint8(a)<<21)|(this.getUint8(a+1)<<14)|
+							(this.getUint8(a+2)<<7)|this.getUint8(a+3)
+						}
+						var frID3={
+							'APIC':function(x,y,z,q){
+								var b=0,c=['',0,''],d=1,e,b64;
+								while(b<3)e=x.getUint8(y+z+d++),c[b]+=String.fromCharCode(e),
+								e!=0||(b+=b==0?(c[1]=x.getUint8(y+z+d),2):1);
+								b64='data:'+c[0]+';base64,'+
+								btoa(String.fromCharCode.apply(null,new Uint8Array(x.buffer.slice(y+z+++d,q))));
+								return {mime:c[0],description:c[2],type:c[1],base64:b64}
+							}
+						}
+						function readID3(result,a,b,c,d,e,f,g,h){
+							if(!(a=new DataView(result))||a.str(0,3)!='ID3')return;
+							g={Version:'ID3v2.'+a.getUint8(3)+'.'+a.getUint8(4)};
+							a=new DataView(a.buffer.slice(10+((a.getUint8(5)&0x40)!=0?a.int(10):0),a.int(6)+10));
+							b=a.byteLength;c=0;d=10;
+							while(true){
+								f=a.str(c);e=a.int(c+4);
+								if(b-c<d||(f<'A'||f>'Z')||c+e>b)break;
+								g[h=a.str(c,4)]=frID3[h]?frID3[h](a,c,d,e):a.str(c+d,e);
+								c+=e+d;
+							}
+							return g;
+						}
+						return readID3( a, b, c, d, e, f, g, h );
+					}
+					
+					var info = parseID3( theData, a1, b1, c1, d1, e1, f1, g1 );
+										
+					if( info && info.TIT2 )
+					{
+						t.metadata = {
+							title: Trim( info.TIT2 ),
+							artist: Trim( info.TCOM ),
+							album: Trim( info.TALB ),
+							year: Trim( info.TYER )
+						};
+						for( let a in t.metadata )
+						{
+							t.metadata[ a ] = t.metadata[ a ].split( /[^ a-z0-9øæå!,.-_]/i ).join( '' );
+						}
+					} 
+					else 
+					{
+						console.log( 'No ID3v1 data found.' );
+					}
+				}
+				catch( e )
+				{
+					console.log( 'Failed to use dataview object.' );
+				}
 			
 				// Decode
 				try
@@ -3374,19 +3447,48 @@ function AudioObject( sample, callback )
 
 	this.pause = function()
 	{
+		if( !this.loader ) return;
 		this.paused = this.loader.audioGraph.pause();
+		if( !this.paused )
+		{
+			// Reboot the counter!
+			var t = this;
+			if( this.interval ) clearInterval( this.interval );
+			this.interval = setInterval( function()
+			{
+				if( t.loader && t.loader.audioGraph.started && t.onplaying && !t.loader.audioGraph.paused )
+				{
+					var ct = t.getContext().currentTime;
+					var pt = t.loader.audioGraph.playTime;
+					try
+					{
+						var dr = t.loader.audioGraph.source.buffer.duration;
+						t.onplaying( ( ct - pt ) / dr, ct, pt, dr );
+					}
+					catch( e )
+					{
+						console.log( 'Playing streaming segment. Fixme!' );
+					}
+				}
+			}, 100 );
+		}
 	}
 
 	this.unload = function()
 	{
-		this.loader.audioGraph.source = null;
-		this.loader.audioGraph = null;
-		this.loader = null;
+		if( this.loader )
+		{
+			this.loader.audioGraph.source = null;
+			this.loader.audioGraph = null;
+			this.loader = null;
+		}
 	}
 
 	this.stop = function()
 	{
-		this.loader.audioGraph.stop();
+		if( this.loader )
+			this.loader.audioGraph.stop();
+		this.stopped = true;
 		if( this.interval )
 		{
 			clearInterval( this.interval );
@@ -3417,11 +3519,12 @@ function AudioObject( sample, callback )
 	// Plays notes!
 	this.play = function()
 	{
+		this.stopped = false;
 		var t = this;
 		if( this.interval ) clearInterval( this.interval );
 		this.interval = setInterval( function()
 		{
-			if( t.loader.audioGraph.started && t.onplaying && !t.loader.audioGraph.paused )
+			if( t.loader && t.loader.audioGraph.started && t.onplaying && !t.loader.audioGraph.paused )
 			{
 				var ct = t.getContext().currentTime;
 				var pt = t.loader.audioGraph.playTime;
@@ -3438,6 +3541,8 @@ function AudioObject( sample, callback )
 		}, 100 );
 		
 		// Handle ending
+		if( !t.loader )
+			return;
 		var ag = t.loader.audioGraph;
 	
 		function ended()
@@ -3462,7 +3567,6 @@ function AudioObject( sample, callback )
 				t.onfinished();
 		}
 		
-		console.log( 'Playing now!' );
 		this.loader.audioGraph.playSound( { onEnded: ended } );
 	}
 
@@ -4839,7 +4943,7 @@ Authenticate = {
 	{
 		var self = this;
 		if ( self.listeners[ event ]) {
-			console.log( { event : event, listeners : self.listeners });
+			//console.log( { event : event, listeners : self.listeners });
 			throw new Error( 'FConn.on - event already registered' );
 		}
 
@@ -5677,6 +5781,7 @@ function initApplicationFrame( packet, eventOrigin, initcallback )
 
 	// Don't do this twice
 	document.body.style.opacity = '0';
+	document.body.style.pointerEvents = 'none';
 	window.frameInitialized = true;
 	var pbase = document.getElementsByTagName( 'base' );
 	if( pbase && pbase.length )
@@ -5685,9 +5790,9 @@ function initApplicationFrame( packet, eventOrigin, initcallback )
 	}
 	else
 	{
-		var b = document.createElement( 'base' );
+		let b = document.createElement( 'base' );
 		//console.log( packet );
-		var test = packet.appPath ? ( '/' + encodeURIComponent( packet.appPath.split( '/' ).join( '|' ) ) + '/' ) : packet.base;
+		let test = packet.appPath ? ( '/' + encodeURIComponent( packet.appPath.split( '/' ).join( '|' ) ) + '/' ) : packet.base;
 		b.href = !!test ? test : '';
 		b.href += ( packet.authId && packet.authId.length ? ( 'aid' + packet.authId ) : ( 'sid' + packet.sessionId ) ) + '/';
 		document.getElementsByTagName( 'head' )[0].appendChild( b );
@@ -6091,7 +6196,37 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 								
 								if( key && !callback )
 								{
-									if( permissions[ key ] )
+									if( Array.isArray( key ) )
+									{
+										var out = [];
+										
+										for( var i in key )
+										{
+											if( key[i] && permissions[ key[i] ] )
+											{
+												if( Array.isArray( permissions[ key[i] ] ) )
+												{
+													for( var ii in permissions[ key[i] ] )
+													{
+														if( permissions[ key[i] ][ ii ] )
+														{
+															out.push( permissions[ key[i] ][ ii ] );
+														}
+													}
+												}
+												else
+												{
+													out.push( permissions[ key[i] ] );
+												}
+											}
+										}
+										
+										if( out.length )
+										{
+											return out;
+										}
+									}
+									else if( permissions[ key ] )
 									{
 										return permissions[ key ];
 									}
@@ -6115,7 +6250,37 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 										
 										if( callback )
 										{
-											if( permissions[ key ] )
+											if( key && Array.isArray( key ) )
+											{
+												var out = [];
+												
+												for( var i in key )
+												{
+													if( key[i] && permissions[ key[i] ] )
+													{
+														if( Array.isArray( permissions[ key[i] ] ) )
+														{
+															for( var ii in permissions[ key[i] ] )
+															{
+																if( permissions[ key[i] ][ ii ] )
+																{
+																	out.push( permissions[ key[i] ][ ii ] );
+																}
+															}
+														}
+														else
+														{
+															out.push( permissions[ key[i] ] );
+														}
+													}
+												}
+												
+												if( out.length )
+												{
+													return callback( out );
+												}
+											}
+											else if( permissions[ key ] )
 											{
 												return callback( permissions[ key ] );
 											}
@@ -6319,8 +6484,8 @@ body .View.Active.IconWindow ::-webkit-scrollbar-thumb
 		}
 	}
 	// Used cached data
-	else if( packet.cachedAppData )
-	{	
+	else if( packet.cachedAppData && packet.cachedAppData.js )
+	{
 		var style = document.createElement( 'style' );
 		style.innerHTML = packet.cachedAppData.css;
 		head.appendChild( style );
@@ -6374,9 +6539,19 @@ function CreateSlider( inputField, flags )
 	g.appendChild( b );
 	d.appendChild( g );
 	
+	var gauge = null;
+	
 	if( !flags ) flags = {};
-	if( !flags.min ) flags.min = 0;
-	if( !flags.max ) flags.max = 100;
+	if( !flags.min  ) flags.min = 0;
+	if( !flags.max  ) flags.max = 100;
+	if( !flags.type ) flags.type = 'default';
+	
+	if( flags.type == 'volume' )
+	{
+		gauge = document.createElement( 'div' );
+		gauge.className = 'SliderGauge';
+		g.appendChild( gauge );
+	}
 	
 	if( inputField.getAttribute( 'min' ) )
 		flags.min = parseInt( inputField.getAttribute( 'min' ) );
@@ -6403,10 +6578,18 @@ function CreateSlider( inputField, flags )
 		if( !flags || !flags.vertical )
 		{
 			b.style.left = Math.floor( ( ( val - flags.min ) / flags.max ) * ( GetElementWidth( g ) - b.offsetWidth ) ) + 'px';
+			if( gauge )
+			{
+				gauge.style.width = parseInt( b.style.left ) + 'px';
+			}
 		}
 		else
 		{
 			b.style.top = Math.floor( ( ( val - flags.min ) / flags.max ) * ( GetElementHeight( g ) - b.offsetHeight ) ) + 'px';
+			if( gauge )
+			{
+				gauge.style.height = parseInt( b.style.top ) + 'px';
+			}
 		}
 		if( inputField.getAttribute( 'onchange' ) )
 		{
@@ -6431,6 +6614,10 @@ function CreateSlider( inputField, flags )
 			else if( x + b.offsetWidth >= GetElementWidth( g ) )
 				x = GetElementWidth( g ) - b.offsetWidth;
 			b.style.left = x + 'px';
+			if( gauge )
+			{
+				gauge.style.width = x + 'px';
+			}
 			inputField.value = Math.floor( ( x / ( GetElementWidth( g ) - b.offsetWidth ) * ( flags.max - flags.min ) ) - flags.min ) + flags.min;
 		}
 		else
@@ -6440,6 +6627,10 @@ function CreateSlider( inputField, flags )
 			if( y + b.offsetHeight > GetElementHeight( g ) )
 				y = GetElementHeight( g ) - b.offsetHeight;
 			b.style.top = y + 'px';
+			if( gauge )
+			{
+				gauge.style.height = y + 'px';
+			}
 			inputField.value = Math.floor( ( y / ( GetElementHeight( g ) - b.offsetHeight ) * ( flags.max - flags.min ) ) - flags.min ) + flags.min;
 		}
 		if( inputField.getAttribute( 'onchange' ) )
@@ -7645,7 +7836,7 @@ AssidRequest.prototype.share = function( handler, callback )
 	{
 		sas.applicationState = 'pending';
 		var reg = {
-			path : 'system.library/app/register/',
+			path : 'system.library/sas/register/',
 			data : {
 				authid : Application.authId,
 			},
@@ -7738,7 +7929,7 @@ AssidRequest.prototype.shareEvents = function( args, handler, callback )
 
 		Friend.conn.on( args.sasid, handler );
 		var accept = {
-			path : 'system.library/app/accept/',
+			path : 'system.library/sas/accept/',
 			data : {
 				authid : Application.authId,
 				sasid : args.sasid
@@ -7768,7 +7959,7 @@ AssidRequest.prototype.unshare = function( callback )
 	{
 		Friend.conn.off( this.applicationId );
 		var unReg = {
-			path : 'system.library/app/unregister',
+			path : 'system.library/sas/unregister',
 			data : {
 				sasid: this.applicationId
 			},
@@ -7806,7 +7997,7 @@ AssidRequest.prototype.sendInvite = function( userlist, inviteMessage, callback 
 	}
 
 	var inv = {
-		path : 'system.library/app/share',
+		path : 'system.library/sas/share',
 		data : {
 			sasid : sas.applicationId,
 			authid : Application.authId,
@@ -7834,7 +8025,7 @@ AssidRequest.prototype.eventDispatcher = function( e )
 	// Send the event through the network!
 	var hostEndpoint = 'send/'; // broadcast to all clients
 	var clientEndpoint = 'sendowner/'; // send to session owner
-	var path = 'system.library/app/';
+	var path = 'system.library/sas/';
 	if ( this.isHost )
 		path += hostEndpoint;
 	else path += clientEndpoint;
@@ -7858,7 +8049,7 @@ AssidRequest.prototype.sendEvent = function( e )
 	//console.log( 'sendEVent', e );
 	var hostEndpoint = 'send/'; // broadcast to all clients
 	var clientEndpoint = 'sendowner/'; // send to session owner
-	var path = 'system.library/app/';
+	var path = 'system.library/sas/';
 	if ( this.isHost )
 		path += hostEndpoint;
 	else path += clientEndpoint;
@@ -8065,8 +8256,11 @@ GuiDesklet = function()
 		var self = this;
 		self.id = conf.sasid || null;
 		self.sessiontype = conf.sessiontype || null;
+		self.forceid = conf.forceid ? conf.forceid : false;
+
 		self.onevent = conf.onevent;
 		self.callback = callback;
+		self.forceid = conf.force;
 
 		self.isHost = false;
 		self.users = {};
@@ -8298,14 +8492,14 @@ GuiDesklet = function()
 
 	// Private - if you are calling these, you are doing it wrong
 
-	ns.SAS.prototype.regPath = 'system.library/app/register';
-	ns.SAS.prototype.acceptPath = 'system.library/app/accept';
-	ns.SAS.prototype.invitePath = 'system.library/app/share';
-	ns.SAS.prototype.removePath = 'system.library/app/unshare';
-	ns.SAS.prototype.closePath = 'system.library/app/unregister';
-	ns.SAS.prototype.toClientsPath = 'system.library/app/send';
-	ns.SAS.prototype.toHostPath = 'system.library/app/sendowner';
-	ns.SAS.prototype.userlistPath = 'system.library/app/userlist';
+	ns.SAS.prototype.regPath = 'system.library/sas/register';
+	ns.SAS.prototype.acceptPath = 'system.library/sas/accept';
+	ns.SAS.prototype.invitePath = 'system.library/sas/share';
+	ns.SAS.prototype.removePath = 'system.library/sas/unshare';
+	ns.SAS.prototype.closePath = 'system.library/sas/unregister';
+	ns.SAS.prototype.toClientsPath = 'system.library/sas/send';
+	ns.SAS.prototype.toHostPath = 'system.library/sas/sendowner';
+	ns.SAS.prototype.userlistPath = 'system.library/sas/userlist';
 
 	ns.SAS.prototype.init =function() {
 		var self = this;
@@ -8330,13 +8524,20 @@ GuiDesklet = function()
 		var self = this;
 		var reg = {
 			path : self.regPath,
+			sasid : self.id,
+			force : self.forceid,
 			data : {
 				authId : Application.authId,
+				'force' : self.forceid
 			},
 		};
 		if( self.sessiontype ) reg.data.type = self.sessiontype;
 		
 		self.conn.request( reg, regBack );
+		
+		//console.log('register host... ' + self.regPath);
+
+		
 		function regBack( res ) {
 			if ( !res.SASID ) {
 				callback( false );
@@ -8364,10 +8565,19 @@ GuiDesklet = function()
 		var accept = {
 			path : self.acceptPath,
 			data : {
-				accauthid : Application.authId,
+				authid : Application.authId,
 				sasid  : self.id,
+				force : self.forceid
 			}
 		};
+		if( self.sessiontype == 'open' )
+		{
+			accept.path = self.regPath;
+			accept.data.authId = Application.authId;
+			accept.data.force = self.forceid;
+			console.log('open session change path for our acceptance to register ourselves' + self.regPath)
+		}
+		
 		self.conn.request( accept, accBack );
 		function accBack( res ) {
 			var host = res.identity;
@@ -8853,12 +9063,15 @@ Friend.GUI.checkInputFocus = function()
 		}
 	}
 	// Send the message
-	Application.sendMessage( {
-		type: 'view',
-		method: 'windowstate',
-		state: 'input-focus',
-		value: response
-	} );
+	if( window.Application && window.Application.sendMessage )
+	{
+		Application.sendMessage( {
+			type: 'view',
+			method: 'windowstate',
+			state: 'input-focus',
+			value: response
+		} );
+	}
 }
 
 // Responsive layout

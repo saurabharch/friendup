@@ -351,6 +351,8 @@ if( !class_exists( 'DoorSQLDrive' ) )
 			}
 			else if( $args->command == 'write' )
 			{
+				set_time_limit( 0 );
+			
 				// We need to check how much is in our database first
 				$deletable = false;
 				$total = 0;
@@ -359,7 +361,7 @@ if( !class_exists( 'DoorSQLDrive' ) )
 					WHERE u.UserID=\'' . $User->ID . '\' AND FilesystemID = \'' . $this->ID . '\'
 				' ) )
 				{
-					$total = $sum->z;
+					$total = intval( $sum->z, 10 );
 				}
 				
 				// Create a file object
@@ -382,7 +384,10 @@ if( !class_exists( 'DoorSQLDrive' ) )
 				// Get by path (subfolder)
 				$subPath = $testPath = false;
 				if( is_string( $path ) && strstr( $path, ':' ) )
-					$testPath = $subPath = end( explode( ':', $path ) );
+				{
+					$subPath = explode( ':', $path );
+					$testPath = $subPath = end( $subPath );
+				}
 				
 				// Remove filename
 				if( substr( $subPath, -1, 1 ) != '/' && strstr( $subPath, '/' ) )
@@ -428,6 +433,8 @@ if( !class_exists( 'DoorSQLDrive' ) )
 						$fn = explode( '/', $fn );
 						$fn = $fn[1];
 					}
+
+					$Logger->log( 'Before write file' );
 	
 					// Write the file
 				
@@ -448,51 +455,79 @@ if( !class_exists( 'DoorSQLDrive' ) )
 							else $fn .= rand(0,99999); 
 						}
 					}
+
+					$Logger->log( 'Before w+' );
 				
 					if( $file = fopen( $wname . $fn, 'w+' ) )
 					{
 						// Delete existing file
 						if( $deletable ) unlink( $deletable );
 					
+						$Logger->log( 'is test' );
 						if( isset( $args->tmpfile ) )
 						{
+							$Logger->log( 'exist?' );
 							if( file_exists( $args->tmpfile ) )
 							{
+								$Logger->log( 'exist!' );
 								fclose( $file );
 								$len = filesize( $args->tmpfile );
-							
-								// TODO: UGLY WORKAROUND, FIX IT!
-								//       We need to support base64 streams
-								if( $fr = fopen( $args->tmpfile, 'r' ) )
+								
+								if( $len > 0 )
 								{
-									$string = fread( $fr, 32 );
-									fclose( $fr );
-									if( substr( urldecode( $string ), 0, strlen( '<!--BASE64-->' ) ) == '<!--BASE64-->' )
+									$Logger->log( 'workaround?' );
+									// TODO: UGLY WORKAROUND, FIX IT!
+									//       We need to support base64 streams
+									if( $fr = fopen( $args->tmpfile, 'r' ) )
 									{
-										$fr = file_get_contents( $args->tmpfile );
-										$fr = base64_decode( end( explode( '<!--BASE64-->', urldecode( $fr ) ) ) );
-										if( $fo = fopen( $args->tmpfile, 'w' ) )
+										$string = fread( $fr, 32 );
+										fclose( $fr );
+										if( substr( urldecode( $string ), 0, strlen( '<!--BASE64-->' ) ) == '<!--BASE64-->' )
 										{
-											fwrite( $fo, $fr );
-											fclose( $fo );
+											// TODO: Add filesize limit!
+											$Logger->log( '[SqlDrive] Trying to read the temp file! May crash!' );
+											$fr = file_get_contents( $args->tmpfile );
+											$fr = base64_decode( end( explode( '<!--BASE64-->', urldecode( $fr ) ) ) );
+											if( $fo = fopen( $args->tmpfile, 'w' ) )
+											{
+												fwrite( $fo, $fr );
+												fclose( $fo );
+											}
+										}
+										else
+										{
+											$Logger->log( '[SqlDrive] Not reading temp file, because it\'s not base 64. Plain move commencing.' );
 										}
 									}
-								}
 
-								if( $total + $len < SQLDRIVE_FILE_LIMIT )
-								{
-									rename( $args->tmpfile, $wname . $fn );
+									if( $total + $len < SQLDRIVE_FILE_LIMIT )
+									{
+										$Logger->log( '[SqlDrive] Moving tmp file ' . $args->tmpfile . ' to ' . $wname . $fn . ' because ' . ( $total + $len ) . ' < ' . SQLDRIVE_FILE_LIMIT );
+										
+										$cmd = 'mv "' . $args->tmpfile . '" "' . $wname . $fn . '"';
+										exec( $cmd, $output, $return_val );
+										
+										if( $return_val != 0 )
+										{
+											$Logger->log( '[SqlWorkgroupDrive] Failed to move file.' );
+											die( 'fail<!--separate-->{"response":"-1","message":"Failed to move temp file."}' );
+										}
+									}
+									else
+									{
+										$Logger->log( 'fail<!--separate-->Limit broken' );
+										die( 'fail<!--separate-->{"response":"-1","message":"Limit broken"}' );
+									}
 								}
 								else
 								{
-									$Logger->log( 'fail<!--separate-->Limit broken' );
-									die( 'fail<!--separate-->Limit broken' );
+									// Write a null byte file...
 								}
 							}
 							else
 							{
 								$Logger->log( 'fail<!--separate-->Tempfile does not exist!' );
-								die( 'fail<!--separate-->Tempfile does not exist!' );
+								die( 'fail<!--separate-->{"response","-1","message":"Tempfile does not exist"}' );
 							}
 						}
 						else
@@ -505,8 +540,7 @@ if( !class_exists( 'DoorSQLDrive' ) )
 							else
 							{
 								fclose( $file );
-								$Logger->log( 'fail<!--separate-->Limit broken ' . SQLDRIVE_FILE_LIMIT );
-								die( 'fail<!--separate-->Limit broken' );
+								die( 'fail<!--separate-->{"response":"-1","message":"Limit broken"}' );
 							}
 						}
 					
@@ -517,9 +551,12 @@ if( !class_exists( 'DoorSQLDrive' ) )
 					
 						$f->DiskFilename = $uname . '/' . $fn;
 						$f->Filesize = filesize( $wname. $fn );
+						$Logger->log( '[SQLDRIVE] WRITING done, size: ' . $f->Filesize );
 						if( !$f->DateCreated ) $f->DateCreated = date( 'Y-m-d H:i:s' );
 						$f->DateModified = date( 'Y-m-d H:i:s' );
+						$Logger->log( '[SQLDRIVE] WRITING store in DB' );
 						$f->Save();
+						$Logger->log( '[SQLDRIVE] WRITING stored in db - recordID is ' . $f->ID . ' (Err: ' . $f->_lastError . ')' . ' -> ' . $f->_lastQuery );
 						return 'ok<!--separate-->' . $len . '<!--separate-->' . $f->ID;
 					}
 				}
@@ -534,6 +571,8 @@ if( !class_exists( 'DoorSQLDrive' ) )
 				
 				$fname = explode( ':', $args->path );
 				$fname = end( $fname );
+
+				set_time_limit( 0 );
 				
 				$subPath = $fname;
 				
@@ -595,8 +634,9 @@ if( !class_exists( 'DoorSQLDrive' ) )
 						{
 							//US-230 This is a memory friendly way to dump a file :-)
 							//Previously the download got broken at 94MB (or another file size depending on php.ini)
-							ob_end_clean(); 
-							readfile($fname);
+							set_time_limit( 0 );
+							ob_end_clean();
+							readfile( $fname );
 							die();
 						}
 						// Return ok

@@ -544,7 +544,7 @@ char** StringSplit( char* str, char delimiter, unsigned int* length )
 		// Copy sub string and append to list
 		char* ns = StringDuplicateN( sptr, ptr - sptr );
 		List* nl = ListNew();
-		nl->data = ns;
+		nl->l_Data = ns;
 		lptr->next = nl;
 		lptr = nl;
 
@@ -560,7 +560,7 @@ char** StringSplit( char* str, char delimiter, unsigned int* length )
 	{
 		char* ns = StringDuplicate( sptr );
 		List* nl = ListNew();
-		nl->data = ns;
+		nl->l_Data = ns;
 		lptr->next = nl;
 		lptr = nl;
 		c++;
@@ -578,12 +578,12 @@ char** StringSplit( char* str, char delimiter, unsigned int* length )
 	free( l );
 	while( lptr->next )
 	{
-		a[i++] = lptr->data;
+		a[i++] = lptr->l_Data;
 		l = lptr;
 		lptr = lptr->next;
 		free( l );
 	}
-	a[i++] = lptr->data;
+	a[i++] = lptr->l_Data;
 	free( lptr );
 	*length = c;
 
@@ -701,26 +701,28 @@ char* StringShellEscapeSize( const char* str, int *len )
 //
 //
 
-static inline void preKmp(char *x, int m, int kmpNext[]) {
+static inline void preKmp(char *x, int m, int *kmpNext )
+{
 	int i, j;
 
 	i = 0;
 	j = kmpNext[0] = -1;
-	while (i < m) 
+	
+	while( i < m ) 
 	{
-		while (j > -1 && x[i] != x[j])
+		while( j > -1 && x[i] != x[j] )
 		{
-			j = kmpNext[j];
+			j = kmpNext[ j ];
 		}
 		i++;
 		j++;
-		if (x[i] == x[j])
+		if( x[i] == x[j] )
 		{
-			kmpNext[i] = kmpNext[j];
+			kmpNext[ i ] = kmpNext[ j ];
 		}
 		else
 		{
-			kmpNext[i] = j;
+			kmpNext[ i ] = j;
 		}
 	}
 }
@@ -767,30 +769,44 @@ char *FindInBinary(char *x, int m, char *y, int n)
 //
 //
 
-FLONG FindInBinaryPOS(char *x, int m, char *y, FULONG n) 
+FQUAD FindInBinaryPOS( char *findString, int m, char *findIn, FQUAD n) 
 {
-	FLONG i, j;
-	int kmpNext[ m ];
+	FQUAD j;
+	int i;
+	//int kmpNext[ m ];
+	int *kmpNext;
+	kmpNext = FMalloc( (m+1)*sizeof(int) );
+	if( kmpNext == NULL )
+	{
+		DEBUG("Cannot allocate memory for kmpNext!\n");
+		return -1;
+	}
 
 	// Preprocessing 
-	preKmp(x, m, kmpNext);
+	preKmp( findString, m, kmpNext );
 
 	// Searching 
-	i = j = 0;
-	while (j < (FLONG)n) 
+	j = 0;
+	i = 0;
+
+	while( j < n ) 
 	{
-		//printf("find %d\n", j );
-		while (i > -1 && x[i] != y[j])
+		//printf("find j %ld i %d\n", j, i );
+		
+		while( i > -1 && findString[ i ] != findIn[ j ] )
 		{
 			i = kmpNext[ i ];
 		}
 		i++;
 		j++;
-		if (i >= m) 
+		
+		if( i >= m )
 		{
+			FFree( kmpNext );
 			return j-i;
 		}
 	}
+	FFree( kmpNext );
 	return -1;
 }
 
@@ -798,9 +814,9 @@ FLONG FindInBinaryPOS(char *x, int m, char *y, FULONG n)
 //
 //
 
-FLONG FindInBinarySimple( char *x, int m, char *y, FULONG n )
+FQUAD FindInBinarySimple( char *x, int m, char *y, FQUAD n )
 {
-	FULONG i;
+	FQUAD i;
 	
 	//INFO("\n\n\nFIND TEXT %s\n", x );
 	
@@ -810,13 +826,16 @@ FLONG FindInBinarySimple( char *x, int m, char *y, FULONG n )
 		if( memcmp( x, y, m ) == 0 )
 		{
 			//FERROR("Found text %50s ------------------------------ %10s\n", (y-50), y );
-			return (FLONG)i;
+			return (FQUAD)i;
 		}
 		y++;
 	}
 	return -1;
 }
 
+//
+//
+//
 
 void HashedString ( char **str )
 {

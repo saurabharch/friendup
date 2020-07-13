@@ -1,7 +1,8 @@
 /* Charcoal ----------------------------------------------------------------- */
 
 html > body.Charcoal,
-html > body.Charcoal.Inside
+html > body.Charcoal.Inside,
+html > body.Charcoal .Content .Scroller:after
 {
 	background: #303030;
 }
@@ -381,7 +382,7 @@ html body.Charcoal .Screen > .TitleBar > .Left *
 
 body.Charcoal #DoorsScreen .Left > .VirtualWorkspaces > div.Active 
 {
-	border: 1px solid #505050;
+	border: 0;
 }
 
 [mobile].Charcoal .View.IconWindow .MobileFileBrowser > .FileBrowser .DiskItem > .Name,
@@ -414,6 +415,11 @@ body.Charcoal .FileBrowserItemImage
 body.Charcoal .Active > .FileBrowserItemImage,
 {
 	filter: invert(100%);
+}
+
+body.Charcoal .Frame .Progress
+{
+	text-shadow: 1px 1px rgba(0,0,0,0.7);
 }
 
 /* Charcoal scheme scrollbars */
@@ -449,5 +455,10 @@ html body.Charcoal .View.Active.IconWindow ::-webkit-scrollbar-thumb
 {
 	background-color: #404040 !important;
 	border-color: #383838;
+}
+
+html body.Charcoal .Frame .Progress
+{
+	text-shadow: 1px 1px rgba(0,0,0,0.7);
 }
 
