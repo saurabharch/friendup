@@ -22,6 +22,12 @@ extern SystemBase *SLIB;
 //static Hashmap *globalSocketAuthMap; //maps websockets to boolean values that are true then the websocket is authenticated
 //static char *_auth_key;
 
+/*
+	Explanation of this file:
+	This implements a websocket connection to external applications like
+	Friend Chat's Presence server - in other words, services.
+*/
+
 #define WEBSOCKET_SEND_QUEUE
 
 static FBOOL VerifyAuthKey( const char *key_name, const char *key_to_verify );
@@ -153,10 +159,15 @@ int WebsocketNotificationsSinkCallback(struct lws* wsi, int reason, void* user, 
 			MobileAppNotif *man = (MobileAppNotif *)user;
 			if( man != NULL && man->man_Data != NULL )
 			{
+				int tr = 15;
 				while( man->man_InUse > 0 )
 				{
-					
-					usleep( 500 );
+					if( tr-- <= 0 )
+					{
+						DEBUG("[NotificationSink] CLOSE, in_use: %d\n", tr );
+						break;
+					}
+					usleep( 25000 );
 				}
 				
 				DataQWSIM *d = (DataQWSIM *)man->man_Data;
@@ -175,6 +186,7 @@ int WebsocketNotificationsSinkCallback(struct lws* wsi, int reason, void* user, 
 					FFree( d );
 				}	
 				man->man_Data = NULL;
+				DEBUG("[NotificationSink] CLOSE, connection closed\n");
 			}
 		}
 		break;
@@ -190,7 +202,7 @@ int WebsocketNotificationsSinkCallback(struct lws* wsi, int reason, void* user, 
 				FRIEND_MUTEX_LOCK( &d->d_Mutex );
 				FQueue *q = &(d->d_Queue);
 			
-				//DEBUG("[websocket_app_callback] WRITABLE CALLBACK, q %p\n", q );
+				DEBUG("[websocket_app_callback] WRITABLE CALLBACK, q %p\n", q );
 			
 				if( ( e = FQPop( q ) ) != NULL )
 				{
@@ -200,7 +212,7 @@ int WebsocketNotificationsSinkCallback(struct lws* wsi, int reason, void* user, 
 
 					//INFO("\t\t\t\t\t\t\t\t\t\t\tSENDMESSSAGE\n<%s> size: %d\n\n\n\n", e->fq_Data+LWS_SEND_BUFFER_PRE_PADDING, e->fq_Size );
 					int res = lws_write( wsi, e->fq_Data+LWS_SEND_BUFFER_PRE_PADDING, e->fq_Size, LWS_WRITE_TEXT );
-					//DEBUG("[websocket_app_callback] message sent: %s len %d\n", e->fq_Data, res );
+					DEBUG("[websocket_app_callback] message sent: %s len %d\n", e->fq_Data, res );
 
 					int v = lws_send_pipe_choked( wsi );
 				
@@ -282,9 +294,24 @@ int ProcessIncomingRequest( DataQWSIM *d, char *data, size_t len, void *udata )
 		spm->data = data;
 		spm->len = len;
 		spm->udata = udata;
+		
+		if( FRIEND_MUTEX_LOCK( &(spm->d->d_Mutex) ) == 0 )
+		{
+			MobileAppNotif *man = (MobileAppNotif *)spm->udata;
+			man->man_InUse++;
+			FRIEND_MUTEX_UNLOCK( &spm->d->d_Mutex );
+		}
 
 		pthread_t tmpThread;
-		pthread_create( &tmpThread, NULL, (void *)( void * )ProcessSinkMessage, spm );
+		if( pthread_create( &tmpThread, NULL, (void *)( void * )ProcessSinkMessage, spm ) != 0 )
+		{
+			if( FRIEND_MUTEX_LOCK( &(spm->d->d_Mutex) ) == 0 )
+			{
+				MobileAppNotif *man = (MobileAppNotif *)spm->udata;
+				man->man_InUse--;
+				FRIEND_MUTEX_UNLOCK( &spm->d->d_Mutex );
+			}
+		}
 
 	}
 	return 0;
@@ -297,17 +324,19 @@ void ProcessIncomingRequest( DataQWSIM *d, char *data, size_t len, void *udata )
 #else
 void ProcessSinkMessage( void *locd )
 {
-	SinkProcessMessage *spm = (SinkProcessMessage *)locd;
 	pthread_detach( pthread_self() );
+	
+	SinkProcessMessage *spm = (SinkProcessMessage *)locd;
 	if( spm == NULL )
 	{
+		if( FRIEND_MUTEX_LOCK( &(spm->d->d_Mutex) ) == 0 )
+		{
+			MobileAppNotif *man = (MobileAppNotif *)spm->udata;
+			man->man_InUse--;
+			FRIEND_MUTEX_UNLOCK( &spm->d->d_Mutex );
+		}
+		pthread_exit( NULL );
 		return;
-	}
-	if( FRIEND_MUTEX_LOCK( &(spm->d->d_Mutex) ) == 0 )
-	{
-		MobileAppNotif *man = (MobileAppNotif *)spm->udata;
-		man->man_InUse++;
-		FRIEND_MUTEX_UNLOCK( &spm->d->d_Mutex );
 	}
 	
 	DataQWSIM *d = spm->d;
@@ -881,13 +910,13 @@ error_point:
 		FFree( spm->data );
 	}
 	FFree( spm );
+	pthread_exit( NULL );
 #else	
 	if( data )
 	{
 		FFree( data );
 	}
-#endif
-	
+#endif	
 	return;
 }
 

@@ -696,7 +696,7 @@ var mousePointer =
 	pickup: function ( ele, e )
 	{
 		// Do not allow pickup for mobile
-		if( window.isMobile ) return;
+		if( window.isMobile || window.isTablet ) return;
 		
 		if( !e ) e = window.event;
 		let ctrl = e && ( e.ctrlKey || e.shiftKey || e.command );
@@ -714,9 +714,15 @@ var mousePointer =
 			if( !ele.window.parentNode.classList.contains( 'Active'  ))
 				_ActivateWindowOnly( ele.window.parentNode );
 			
+			if( ele.window && ele.window.directoryview && ele.window.directoryview.filedialog )
+			{
+				return false;
+			}
+			
 			for( var a = 0; a < ele.window.icons.length; a++ )
 			{
 				let ic = ele.window.icons[a];
+
 				if( !ic.domNode ) continue;
 				
 				if( ic.domNode.className.indexOf ( 'Selected' ) > 0 )
@@ -805,21 +811,54 @@ var themeInfo = {
 	dynamicClasses: {
 		WindowSnapping: function( e )
 		{
+			if( !Workspace.screen || !Workspace.screen.contentDiv.directoryview ) return;
 			let hh = Workspace && Workspace.screen ? ( Workspace.screen.getMaxViewHeight() + 'px' ) : '0';
-			let winw = window.innerWidth + 'px';
-			let ww = Math.floor( window.innerWidth * 0.5 ) + 'px';
+			
+			let winw = Workspace.screen.contentDiv.directoryview;
+			if( !winw.scroller ) return;
+			
+			let leftx = 0;
+			let topy = 0;
+			let dockWidth = 0;
+			
+			if( Workspace.mainDock )
+			{
+				switch( Workspace.mainDock.dom.getAttribute( 'position' ) )
+				{
+					case 'left_center':
+					case 'left_top':
+					case 'left_bottom':
+						leftx = Workspace.mainDock.dom.offsetWidth + 'px';
+						dockWidth = Workspace.mainDock.dom.offsetWidth;
+						break;
+					case 'right_center':
+					case 'right_top':
+					case 'right_bottom':
+						dockWidth = Workspace.mainDock.dom.offsetWidth;
+						break;
+					case 'top_left':
+					case 'top_center':
+					case 'top_right':
+						topy = Workspace.mainDock.dom.offsetHeight + 'px';
+						break;
+				}
+			}
+			
+			winw = window.innerWidth - dockWidth;
+			let ww = Math.floor( winw >> 1 ) + 'px';
+			
 			return `
 html .View.SnapLeft
 {
-	left: 0 !important;
-	top: 0;
+	left: ${leftx} !important;
+	top: ${topy} !important;
 	height: ${hh} !important;
 	width: ${ww} !important;
 }
 html .View.SnapRight
 {
-	left: calc(${winw} - ${ww}) !important;
-	top: 0;
+	left: calc(${leftx} + ${ww}) !important;
+	top: ${topy} !important;
 	height: ${hh} !important;
 	width: ${ww} !important;
 }
@@ -2020,22 +2059,48 @@ movableListener = function( e, data )
 				);
 
 				// Do the snap!
-				if( !isMobile )
+				if( !isMobile && currentMovable.windowObject.flags.resize !== false )
 				{
 					let tsX = w.offsetLeft;
 					let tsY = w.offsetTop;
-					if( windowMouseY > 0 )
+					
+					let screenLeftEdge = screenRightEdge = 0;
+					
+					let dv = Workspace.screen.contentDiv.directoryview;
+					if( dv && dv.scroller )
+					{
+						screenRightEdge = window.innerWidth;
+						screenLeftEdge = 0;
+						
+						let dock = Workspace.mainDock ? Workspace.mainDock.dom : false;
+						if( dock )
+						{
+							if( dock.classList.contains( 'Left' ) )
+							{
+								screenLeftEdge += dock.offsetWidth;
+							}
+							else if( dock.classList.contains( 'Right' ) )
+							{
+								screenRightEdge -= dock.offsetWidth;
+							}
+						}
+						
+					}
+					
+					// Give some space from the title bar
+					if( windowMouseY > 40 )
 					{
 						let snapOut = false;
-						let hw = window.innerWidth * 0.1;
-						let rhw = window.innerWidth - hw;
+						let hw = 128;
+						let rhw = screenRightEdge - 128;
+						
 						if( windowMouseX > hw && windowMouseX < rhw )
 						{
 							snapOut = true;
 						}
 						else
 						{
-							if( tsX == 0 )
+							if( tsX <= screenLeftEdge )
 							{
 								w.classList.remove( 'SnapRight' );
 								if( !w.classList.contains( 'SnapLeft' ) )
@@ -2046,7 +2111,7 @@ movableListener = function( e, data )
 										w.content.refresh();
 								}
 							}
-							else if( tsX + w.offsetWidth == window.innerWidth )
+							else if( tsX + w.offsetWidth >= screenRightEdge )
 							{
 								w.classList.remove( 'SnapLeft' );
 								if( !w.classList.contains( 'SnapRight' ) )
@@ -2154,12 +2219,13 @@ movableListener = function( e, data )
 		}
 	}
 	// Mouse down on desktop (regions)
-	if( !window.isMobile && window.mouseDown == 4 && window.regionWindow )
+	if( !window.isTablet && !window.isMobile && window.mouseDown == 4 && window.regionWindow )
 	{
 		// Prime
 		if( window.regionWindow.directoryview )
 		{
 			let scrl = window.regionWindow.directoryview.scroller;
+			
 			if( !scrl.scrolling )
 			{
 				scrl.scrollTopStart  = scrl.scrollTop;
@@ -2540,6 +2606,7 @@ movableMouseUp = function( e )
 			setTimeout( function()
 			{
 				Workspace.iconContextMenu.hide();
+				Workspace.contextMenuShowing = null;
 			}, 150 );
 		}
 	}
@@ -2612,9 +2679,10 @@ function CheckScreenTitle( screen, force )
 	if( wo && wo.parentNode && !wo.parentNode.parentNode )
 		wo = false;
 	
+	let isDoorsScreen = testObject.id == 'DoorsScreen';	
+
 	let hasScreen = ( !csc || ( wo && testObject.screenObject == wo.screen ) || ( wo && !wo.screen && isDoorsScreen ) );
 	
-	let isDoorsScreen = testObject.id == 'DoorsScreen';	
 	
 	// Clear the delayed action
 	if( _screenTitleTimeout )
@@ -3633,9 +3701,10 @@ movableMouseDown = function ( e )
 	// Get target
 	let tar = e.srcElement ? e.srcElement : e.target;
 	
-	if( ( window.isTablet || window.isMobile ) && Workspace.iconContextMenu )
+	if( ( window.isTablet || window.isMobile ) && Workspace.contextMenuShowing )
 	{
 		Workspace.iconContextMenu.hide();
+		Workspace.contextMenuShowing = null;
 		if( !isMobile )
 			DefaultToWorkspaceScreen( tar );
 	}
@@ -3665,6 +3734,7 @@ movableMouseDown = function ( e )
 	if( !clickOnMenuItem && Workspace.iconContextMenu )
 	{
 		Workspace.iconContextMenu.hide();
+		Workspace.contextMenuShowing = null;
 	}
 	
 	let sh = e.shiftKey || e.ctrlKey;
@@ -3706,12 +3776,23 @@ movableMouseDown = function ( e )
 		!isMobile && ( clickonDesktop || clickOnView )
 	)
 	{
-		if( !sh && e.button === 0 )
+		if( !sh && ( e.button === 0 || e.touches ) )
 		{
 			// Don't count scrollbar
-			if( ( ( e.clientX - GetElementLeft( tar ) ) < tar.offsetWidth - 16 ) )
+			let px = e.touches ? e.touches[0].pageX : e.clientX;
+			if( ( ( px - GetElementLeft( tar ) ) < tar.offsetWidth - 16 ) )
 			{
-				clearRegionIcons( { force: true } );
+				setTimeout( function()
+				{
+					if( tar.directoryview )
+					{
+						if( tar.directoryview.refreshScrollTimeout )
+						{
+							return;
+						}
+					}
+					clearRegionIcons( { force: true } );
+				}, 100 );
 			}
 		}
 		

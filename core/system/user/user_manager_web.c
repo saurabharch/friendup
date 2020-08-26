@@ -45,24 +45,27 @@ inline static int killUserSession( SystemBase *l, UserSession *ses )
 	DEBUG("[UMWebRequest] user %s session %s will be removed by user %s msglength %d\n", uname, ses->us_SessionID, uname, msgsndsize );
 	
 	// set flag to WS connection "te be killed"
-	FRIEND_MUTEX_LOCK( &(ses->us_Mutex) );
-	ses->us_InUseCounter--;
-	if( ses->us_WSD != NULL )
+	if( FRIEND_MUTEX_LOCK( &(ses->us_Mutex) ) == 0 )
 	{
-		ses->us_WebSocketStatus = WEBSOCKET_SERVER_CLIENT_TO_BE_KILLED;
+		if( ses->us_WSD != NULL )
+		{
+			ses->us_WebSocketStatus = WEBSOCKET_SERVER_CLIENT_TO_BE_KILLED;
+		}
+		FRIEND_MUTEX_UNLOCK( &(ses->us_Mutex) );
 	}
-	FRIEND_MUTEX_UNLOCK( &(ses->us_Mutex) );
 	
 	// wait till queue will be empty
 	while( TRUE )
 	{
-		FRIEND_MUTEX_LOCK( &(ses->us_Mutex) );
-		if( ses->us_WSD == NULL || ses->us_MsgQueue.fq_First == NULL )
+		if( FRIEND_MUTEX_LOCK( &(ses->us_Mutex) ) == 0 )
 		{
+			if( ses->us_WSD == NULL || ses->us_MsgQueue.fq_First == NULL )
+			{
+				FRIEND_MUTEX_UNLOCK( &(ses->us_Mutex) );
+				break;
+			}
 			FRIEND_MUTEX_UNLOCK( &(ses->us_Mutex) );
-			break;
 		}
-		FRIEND_MUTEX_UNLOCK( &(ses->us_Mutex) );
 		usleep( 1000 );
 	}
 	
@@ -138,13 +141,12 @@ inline static int killUserSessionByUser( SystemBase *l, User *u, char *deviceid 
 	}
 	
 	// remove sessions
-	for( i=0 ; i < nrSessions ; i++ )
+	for( i=0 ; i < nrSessions; i++ )
 	{
 		UserSession *ses = toBeRemoved[ i ];
 		
 		if( FRIEND_MUTEX_LOCK( &(ses->us_Mutex) ) == 0 )
 		{
-			ses->us_InUseCounter--;
 			if( ses->us_WSD != NULL  )
 			{
 				ses->us_WebSocketStatus = WEBSOCKET_SERVER_CLIENT_TO_BE_KILLED;
@@ -212,10 +214,10 @@ inline static void NotifyExtServices( SystemBase *l, Http *request, User *usr, c
  * @param request http request
  * @param loggedSession pointer to UserSession which called this function
  * @param result pointer to result value
- * @param sessionRemoved pointer to FBOOL where information about logout will be stored
+ * @param sessionRemoved pointer to int where information about logout will be stored
  * @return response as Http structure, otherwise NULL
  */
-Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedSession, int *result, FBOOL *sessionRemoved )
+Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedSession, int *result, int *sessionRemoved )
 {
 	SystemBase *l = (SystemBase *)m;
 	Http *response = NULL;
@@ -1704,11 +1706,6 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 						l->LibrarySQLDrop( l, sqlLib );
 					}
 					
-					// Logout must be last action called on UserSession
-					FRIEND_MUTEX_LOCK( &(sess->us_Mutex) );
-					sess->us_InUseCounter--;
-					FRIEND_MUTEX_UNLOCK( &(sess->us_Mutex) );
-					
 					if( l->sl_ActiveAuthModule != NULL )
 					{
 						l->sl_ActiveAuthModule->Logout( l->sl_ActiveAuthModule, request, sessid );
@@ -1716,7 +1713,7 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 					
 					error = USMUserSessionRemove( l->sl_USM, sess );
 					
-					*sessionRemoved = TRUE;
+					*sessionRemoved = LL_LOGOUT;
 				}
 				//
 				// we found user which must be removed
@@ -2351,7 +2348,6 @@ Http *UMWebRequest( void *m, char **urlpath, Http *request, UserSession *loggedS
 		
 		response = HttpNewSimple( HTTP_200_OK,  tags );
 		
-		//UserSession *usrses = l->sl_USM->usm_Sessions;
 		FULONG keyid = 0;
 		
 		DEBUG( "[UMWebRequest] update key" );

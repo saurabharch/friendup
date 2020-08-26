@@ -296,15 +296,19 @@ if( !class_exists( 'DoorSQLDrive' ) )
 					// Create a file object
 					$f = new dbIO( 'FSFile' );
 					$f->FilesystemID = $this->ID;
-					$fname = end( explode( ':', $args->path ) );
-					$fname = end( explode( '/', $fname ) );
+					$fname = explode( ':', $args->path );
+					$fname = end( $fname );
+					$fname = explode( '/', $fname );
+					$fname = end( $fname );
 					$f->Filename = $fname;
 					//$f->UserID = $User->ID; // TODO: Add for security!
 					$f->FolderID = '0';
 					$fn = '';
 	
 					// Can we get sub folder?
-					if( isset( $args->path ) && $subPath = trim( end( explode( ':', $args->path ) ) ) )
+					$test = explode( ':', $args->path );
+					$test = end( $test );
+					if( isset( $args->path ) && $subPath = trim( $test ) )
 					{	
 						// Remove filename
 						if( substr( $subPath, -1, 1 ) != '/' && strstr( $subPath, '/' ) )
@@ -351,6 +355,8 @@ if( !class_exists( 'DoorSQLDrive' ) )
 			}
 			else if( $args->command == 'write' )
 			{
+				set_time_limit( 0 );
+			
 				// We need to check how much is in our database first
 				$deletable = false;
 				$total = 0;
@@ -359,7 +365,7 @@ if( !class_exists( 'DoorSQLDrive' ) )
 					WHERE u.UserID=\'' . $User->ID . '\' AND FilesystemID = \'' . $this->ID . '\'
 				' ) )
 				{
-					$total = $sum->z;
+					$total = intval( $sum->z, 10 );
 				}
 				
 				// Create a file object
@@ -501,12 +507,19 @@ if( !class_exists( 'DoorSQLDrive' ) )
 									if( $total + $len < SQLDRIVE_FILE_LIMIT )
 									{
 										$Logger->log( '[SqlDrive] Moving tmp file ' . $args->tmpfile . ' to ' . $wname . $fn . ' because ' . ( $total + $len ) . ' < ' . SQLDRIVE_FILE_LIMIT );
-										rename( $args->tmpfile, $wname . $fn );
+										
+										$res = rename( $args->tmpfile, $wname . $fn );
+										
+										if( !$res )
+										{
+											$Logger->log( '[SqlDrive] Failed to move file.' );
+											die( 'fail<!--separate-->{"response":"-1","message":"Failed to move temp file."}' );
+										}
 									}
 									else
 									{
 										$Logger->log( 'fail<!--separate-->Limit broken' );
-										die( 'fail<!--separate-->Limit broken' );
+										die( 'fail<!--separate-->{"response":"-1","message":"Limit broken"}' );
 									}
 								}
 								else
@@ -517,12 +530,11 @@ if( !class_exists( 'DoorSQLDrive' ) )
 							else
 							{
 								$Logger->log( 'fail<!--separate-->Tempfile does not exist!' );
-								die( 'fail<!--separate-->Tempfile does not exist!' );
+								die( 'fail<!--separate-->{"response","-1","message":"Tempfile does not exist"}' );
 							}
 						}
 						else
 						{
-							$Logger->log( 'is tmp file set, limit: ' . SQLDRIVE_FILE_LIMIT );
 							if( $total + strlen( $args->data ) < SQLDRIVE_FILE_LIMIT )
 							{
 								$len = fwrite( $file, $args->data );
@@ -530,10 +542,8 @@ if( !class_exists( 'DoorSQLDrive' ) )
 							}
 							else
 							{
-								$Logger->log( 'die!die!die! my darling! ' );
 								fclose( $file );
-								$Logger->log( 'fail<!--separate-->Limit broken ' . SQLDRIVE_FILE_LIMIT );
-								die( 'fail<!--separate-->Limit broken' );
+								die( 'fail<!--separate-->{"response":"-1","message":"Limit broken"}' );
 							}
 						}
 					

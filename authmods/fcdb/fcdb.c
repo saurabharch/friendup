@@ -348,14 +348,16 @@ UserSession *Authenticate( struct AuthMod *l, Http *r, struct UserSession *logse
 	
 	if( logsess == NULL  )
 	{
-		DEBUG("[FCDB] Usersession not provided, will be taken from DB\n");
+		DEBUG("[FCDB] Usersession not provided, will be taken from DB. User name: %s\n", name );
 
 		tmpusr = sb->sl_UserManagerInterface.UMUserGetByNameDB( sb->sl_UM, name );
 		userFromDB = TRUE;
 		
+		DEBUG("[FCBD] pointer to user: %p\n", tmpusr );
 		if( tmpusr != NULL )
 		{
-			uses = USMGetSessionByDeviceIDandUser( sb->sl_USM, devname, tmpusr->u_ID );
+			uses = sb->sl_UserSessionManagerInterface.USMGetSessionByDeviceIDandUser( sb->sl_USM, devname, tmpusr->u_ID );
+			DEBUG("[FCBD] pointer to user session: %p by devname: %s userid: %ld\n", uses, devname, tmpusr->u_ID );
 		}
 		else
 		{
@@ -538,6 +540,17 @@ UserSession *Authenticate( struct AuthMod *l, Http *r, struct UserSession *logse
 		}
 		
 		//
+		//
+		//
+		
+		DEBUG("[FCDB] Get session by deviceid: %s\n", devname );
+		if( tmpusr != NULL )
+		{
+			uses = sb->sl_UserSessionManagerInterface.USMGetSessionByDeviceIDandUser( sb->sl_USM, devname, tmpusr->u_ID );
+			DEBUG("[FCBD] pointer to user session: %p by devname: %s userid: %ld\n", uses, devname, tmpusr->u_ID );
+		}
+		
+		//
 		// if session is not provided we must create one
 		//
 		
@@ -650,7 +663,7 @@ UserSession *Authenticate( struct AuthMod *l, Http *r, struct UserSession *logse
 	// next request, if session id exist then user is logged in
 	
 loginok:
-	DEBUG("[FCDB] Login ok Stored\n");
+	DEBUG("[FCDB] Login ok Stored %p\n", uses);
 	sb->sl_UserManagerInterface.UMStoreLoginAttempt( sb->sl_UM, name, "Login success", NULL );
 	return uses;
 	
