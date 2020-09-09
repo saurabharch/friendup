@@ -332,10 +332,10 @@ static void crash_handler(int sig __attribute__((unused))){
 	for (i = 0; i < trace_size; ++i)
 	{
 		fprintf(crash_log_file_handle, "> %s\n", messages[i]);
-		if (addr2line(_program_name, stack_traces[i], crash_log_file_handle) != 0)
-		{
-			fprintf(crash_log_file_handle, "  error determining line # for: %s\n", messages[i]);
-		}
+		//if (addr2line(_program_name, stack_traces[i], crash_log_file_handle) != 0)
+		//{
+		//	fprintf(crash_log_file_handle, "  error determining line # for: %s\n", messages[i]);
+		//}
 
 	}
 	if (messages) { free(messages); }
