@@ -59,6 +59,7 @@ void UserSessionInit( UserSession *us )
 		pthread_mutex_init( &us->us_Mutex, NULL );
 		
 		us->us_WSReqManager = WebsocketReqManagerNew();
+		us->us_SpecialID = 0x12345987;
 		
 		FQDeInit( &(us->us_MsgQueue) );
 	}
@@ -74,6 +75,12 @@ void UserSessionDelete( UserSession *us )
 	if( us != NULL )
 	{
 		Log( FLOG_DEBUG, "\nUserSessionDelete will be removed: %s\n\n", us->us_SessionID );
+		
+		if( us->us_SpecialID != 0x12345987 )
+		{
+			return;
+		}
+		
 		int count = 0;
 		int nrOfSessionsAttached = 0;
 

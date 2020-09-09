@@ -485,6 +485,7 @@ UserSession *USMUserSessionAddToList( UserSessionManager *smgr, UserSession *s )
 	}
 	
 	//
+	/*
 	if( FRIEND_MUTEX_LOCK( &(smgr->usm_Mutex) ) == 0 )
 	{
 		UserSession *actSess = smgr->usm_SessionsToBeRemoved;
@@ -502,6 +503,7 @@ UserSession *USMUserSessionAddToList( UserSessionManager *smgr, UserSession *s )
 			UserSessionDelete( remSess );
 		}
 	}
+	*/
 	
 	DEBUG("[USMUserSessionAddToList] end\n");
 	

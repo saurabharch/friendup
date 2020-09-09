@@ -57,8 +57,6 @@ CREATE TABLE IF NOT EXISTS `FUserSession` (
 
 typedef struct UserSession
 {
-	MinNode					node;
-	
 	FULONG					us_ID;						// User session ID
 	pthread_mutex_t			us_Mutex;					// User mutex
 	
@@ -87,6 +85,9 @@ typedef struct UserSession
 	time_t					us_LastPingTime;		// ping timestamp
 	void					*us_WSD;				// pointer to WebsocketData
 	FQueue					us_MsgQueue;			// message queue
+	
+	FULONG					us_SpecialID;
+	MinNode					node;
 }UserSession;
 
 //
