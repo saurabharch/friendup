@@ -943,60 +943,60 @@ int USMRemoveOldSessions( void *lsb )
 	//FRIEND_MUTEX_LOCK( &(smgr->usm_Mutex) );
 	DEBUG("[USMRemoveOldSessions] CHECK10\n");
 
+	if( FRIEND_MUTEX_LOCK( &(smgr->usm_Mutex) ) == 0 )
 	{
-		if( FRIEND_MUTEX_LOCK( &(smgr->usm_Mutex) ) == 0 )
-		{
-			UserSession *actSession = smgr->usm_Sessions;
-			UserSession *remSession = actSession;
-			UserSession *newRoot = NULL;
+		UserSession *actSession = smgr->usm_Sessions;
+		UserSession *remSession = actSession;
+		UserSession *newRoot = NULL;
 	
-			while( actSession != NULL )
+		while( actSession != NULL )
+		{
+			FBOOL canDelete = TRUE;
+			remSession = actSession;
+				
+			if( sb->sl_Sentinel != NULL )
 			{
-				FBOOL canDelete = TRUE;
-				remSession = actSession;
-				
-				if( sb->sl_Sentinel != NULL )
+				if( remSession->us_User == sb->sl_Sentinel->s_User && strcmp( remSession->us_DeviceIdentity, "remote" ) == 0 )
 				{
-					if( remSession->us_User == sb->sl_Sentinel->s_User && strcmp( remSession->us_DeviceIdentity, "remote" ) == 0 )
-					{
-						DEBUG("Sentinel REMOTE session I cannot remove it\n");
-						canDelete = FALSE;
-					}
-				}
-				
-				if( actSession == (UserSession *)actSession->node.mln_Succ )
-				{
-					DEBUG( "DOUBLE ACTSESSION\n" );
-					break;
-				}
-				
-				actSession = (UserSession *)actSession->node.mln_Succ;
-				
-				// we delete session
-				if( canDelete == TRUE && ( ( acttime -  remSession->us_LoggedTime ) > sb->sl_RemoveSessionsAfterTime ) )
-				{
-					if( remSession != (UserSession *) smgr->usm_SessionsToBeRemoved )
-					{
-						remSession->node.mln_Succ = (MinNode *) smgr->usm_SessionsToBeRemoved;
-						smgr->usm_SessionsToBeRemoved = remSession;
-					}
-				}
-				else // or create new root of working sessions
-				{
-					remSession->node.mln_Succ = (MinNode *)newRoot;
-					newRoot = remSession;
+					DEBUG("Sentinel REMOTE session I cannot remove it\n");
+					canDelete = FALSE;
 				}
 			}
 			
-			smgr->usm_Sessions = newRoot;
+			if( actSession == (UserSession *)actSession->node.mln_Succ )
+			{
+				DEBUG( "DOUBLE ACTSESSION\n" );
+				break;
+			}
+				
+			actSession = (UserSession *)actSession->node.mln_Succ;
 			
-		    FRIEND_MUTEX_UNLOCK( &(smgr->usm_Mutex) );
+			// we delete session
+			if( canDelete == TRUE && ( ( acttime -  remSession->us_LoggedTime ) > sb->sl_RemoveSessionsAfterTime ) )
+			{
+				if( remSession != (UserSession *) smgr->usm_SessionsToBeRemoved )
+				{
+					remSession->node.mln_Succ = (MinNode *) smgr->usm_SessionsToBeRemoved;
+					smgr->usm_SessionsToBeRemoved = remSession;
+				}
+			}
+			else // or create new root of working sessions
+			{
+				remSession->node.mln_Succ = (MinNode *)newRoot;
+				newRoot = remSession;
+			}
 		}
+		
+		smgr->usm_Sessions = newRoot;
+		
+	    FRIEND_MUTEX_UNLOCK( &(smgr->usm_Mutex) );
 	}
 	
 	//
 	//
 	//
+	
+	DEBUG("[USMRemoveOldSessions] release removed entries\n" );
 	
 	if( FRIEND_MUTEX_LOCK( &(smgr->usm_Mutex) ) == 0 )
 	{
@@ -1008,6 +1008,8 @@ int USMRemoveOldSessions( void *lsb )
 		
 		while( actSess != NULL )
 		{
+			DEBUG("[USMRemoveOldSessions] remove session in progress: %s\n", actSess->us_SessionID );
+			
 			remSess = actSess;
 			actSess = (UserSession *)actSess->node.mln_Succ;
 			
@@ -1021,6 +1023,8 @@ int USMRemoveOldSessions( void *lsb )
 	//
 	
 	ApplicationManagerRemoveDetachedApplicationSession( sb->sl_ApplicationManager );
+	
+	DEBUG("[USMRemoveOldSessions] end\n" );
 	
 	return 0;
 }
