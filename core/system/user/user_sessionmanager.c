@@ -327,12 +327,20 @@ UserSession *USMGetSessionsByTimeout( UserSessionManager *smgr, const FULONG tim
 	time_t timestamp = time ( NULL );
 	struct UserSession *usersession = NULL;
 	int entries = 0;
-	char tmpQuery[ 1024 ];
+	
+#define TMP_QUERY_SIZE 1024
+
+	char *tmpQuery = FCalloc( TMP_QUERY_SIZE, sizeof(char) );
+	if( tmpQuery == NULL )
+	{
+		return NULL;
+	}
 	
 	SQLLibrary *sqlLib = sb->LibrarySQLGet( sb );
 	if( sqlLib == NULL )
 	{
 		FERROR("Cannot get user, mysql.library was not open\n");
+		FFree( tmpQuery );
 		return NULL;
 	}
 	
@@ -350,11 +358,11 @@ UserSession *USMGetSessionsByTimeout( UserSessionManager *smgr, const FULONG tim
 
 	if( ( sent = sb->GetSentinelUser( sb ) ) != NULL )
 	{
-		sqlLib->SNPrintF( sqlLib, tmpQuery, sizeof(tmpQuery), "( LoggedTime > '%lld' OR  `UserID` in( SELECT ID FROM `FUser` WHERE `Name`='%s') )", (long long int)(timestamp - timeout), sent->s_ConfigUsername );
+		sqlLib->SNPrintF( sqlLib, tmpQuery, TMP_QUERY_SIZE, "( LoggedTime > '%lld' OR  `UserID` in( SELECT ID FROM `FUser` WHERE `Name`='%s') )", (long long int)(timestamp - timeout), sent->s_ConfigUsername );
 	}
 	else
 	{
-		sqlLib->SNPrintF( sqlLib, tmpQuery, sizeof(tmpQuery), " ( LoggedTime > '%lld' )", (long long int)(timestamp - timeout) );
+		sqlLib->SNPrintF( sqlLib, tmpQuery, TMP_QUERY_SIZE, " ( LoggedTime > '%lld' )", (long long int)(timestamp - timeout) );
 	}
 	
 	DEBUG( "[USMGetSessionsByTimeout] Sending query: %s...\n", tmpQuery );
@@ -369,7 +377,10 @@ UserSession *USMGetSessionsByTimeout( UserSessionManager *smgr, const FULONG tim
     
 	sb->LibrarySQLDrop( sb, sqlLib );
 
+	FFree( tmpQuery );
+	
 	DEBUG("[USMGetSessionsByTimeout] UserGetByTimeout end\n");
+	
 	return usersession;
 }
 
