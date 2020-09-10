@@ -387,31 +387,36 @@ User-Agent: Friend/1.0.0
 				
 				DEBUG("[HttpClientCall] sent bytes: %d\n", bytes );
 
-				char response[ 2048 ];
-				memset( response, 0, sizeof(response) );
-				received = 0;
-		
-				struct timeval timeout;      
-				timeout.tv_sec = HTTP_CLIENT_TIMEOUT;
-				timeout.tv_usec = 0;
-
-				if( setsockopt( sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout) ) < 0 ) {}
-		
-				while( TRUE ) 
+				//char response[ 2048 ];
+				//memset( response, 0, sizeof(response) );
+				char *response = FCalloc( INT_REPONSE_LEN, sizeof(char) );
+				if( response != NULL )
 				{
-					bytes = read( sockfd, response, sizeof(response) );
-					if( bytes < 0 )
+					received = 0;
+		
+					struct timeval timeout;      
+					timeout.tv_sec = HTTP_CLIENT_TIMEOUT;
+					timeout.tv_usec = 0;
+
+					if( setsockopt( sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout) ) < 0 ) {}
+		
+					while( TRUE ) 
 					{
-						FERROR("ERROR reading response from socket\n");
-						break;
+						bytes = read( sockfd, response, INT_REPONSE_LEN );
+						if( bytes < 0 )
+						{
+							FERROR("ERROR reading response from socket\n");
+							break;
+						}
+						if( bytes == 0 )
+						{
+							FERROR("ERROR received bytes 0\n");
+							break;
+						}
+						received += bytes;
+						BufStringAddSize( bs, response, bytes );
 					}
-					if( bytes == 0 )
-					{
-						FERROR("ERROR received bytes 0\n");
-						break;
-					}
-					received += bytes;
-					BufStringAddSize( bs, response, bytes );
+					FFree( response );
 				}
 			}
 			if( message != NULL )
