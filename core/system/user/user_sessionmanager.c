@@ -721,7 +721,7 @@ int USMUserSessionRemove( UserSessionManager *smgr, UserSession *remsess )
 	}
 	
 	UserSession *sess = smgr->usm_Sessions;
-	UserSession *prev = sess;
+	UserSession *nroot = NULL;
 	FBOOL sessionRemoved = FALSE;
 	
 	DEBUG("[USMUserSessionRemove] UserSessionRemove\n");
@@ -729,52 +729,25 @@ int USMUserSessionRemove( UserSessionManager *smgr, UserSession *remsess )
 	DEBUG("CHECK9\n");
 	if( FRIEND_MUTEX_LOCK( &(smgr->usm_Mutex) ) == 0 )
 	{
-		if( remsess == smgr->usm_Sessions )
+		while( sess != NULL )
 		{
-			smgr->usm_Sessions = (UserSession *)smgr->usm_Sessions->node.mln_Succ;
-			sessionRemoved = TRUE;
-			smgr->usm_SessionCounter--;
-			INFO("[USMUserSessionRemove] Session removed from list\n");
-		}
-		else
-		{
-			while( sess != NULL )
+			UserSession *toBeRemoved = sess;
+			sess = (UserSession *)sess->node.mln_Succ;
+			
+			if( toBeRemoved == remsess )
 			{
-				/*
-				prev = sess;
-				sess = (UserSession *)sess->node.mln_Succ;
-			
-				if( sess == remses )
-				{
-				if( prevus == usr->u_SessionsList )
-				{
-					usr->u_SessionsList = (UserSessListEntry *)usr->u_SessionsList->node.mln_Succ;
-				}
-				else
-				{
-					prevus->node.mln_Succ = (MinNode *)actus;
-				}
-				usr->u_SessionsNr--;
-				removed = TRUE;
-				break;
+				DEBUG("[USMUserSessionRemove] Session removed from list\n");
+				sessionRemoved = TRUE;
 			}
-			*/
-				
-				prev = sess;
-				sess = (UserSession *)sess->node.mln_Succ;
-			
-				if( sess != NULL && sess == remsess )
-				{
-					// Remove usersession from list
-					prev->node.mln_Succ = sess->node.mln_Succ;
-					DEBUG("[USMUserSessionRemove] Session removed from list\n");
-					sessionRemoved = TRUE;
-					break;
-				}
-				
+			else
+			{
+				toBeRemoved->node.mln_Succ = (MinNode *)nroot;
+				nroot = toBeRemoved;
 			}
-			smgr->usm_SessionCounter--;
 		}
+		smgr->usm_Sessions = nroot;
+		smgr->usm_SessionCounter--;
+		
 		FRIEND_MUTEX_UNLOCK( &(smgr->usm_Mutex) );
 	}
 	
@@ -1020,6 +993,29 @@ int USMRemoveOldSessions( void *lsb )
 		    FRIEND_MUTEX_UNLOCK( &(smgr->usm_Mutex) );
 		}
 	}
+	
+	//
+	//
+	//
+	
+	if( FRIEND_MUTEX_LOCK( &(smgr->usm_Mutex) ) == 0 )
+	{
+		UserSession *actSess = smgr->usm_SessionsToBeRemoved;
+		UserSession *remSess = smgr->usm_SessionsToBeRemoved;
+		smgr->usm_SessionsToBeRemoved = NULL;
+		
+		FRIEND_MUTEX_UNLOCK( &(smgr->usm_Mutex) );
+		
+		while( actSess != NULL )
+		{
+			remSess = actSess;
+			actSess = (UserSession *)actSess->node.mln_Succ;
+			
+			USMGetSessionsDeleteDB( smgr, remSess->us_SessionID );
+			UserSessionDelete( remSess );
+		}
+	}
+	
 	//
 	// now remove unused application sessions
 	//

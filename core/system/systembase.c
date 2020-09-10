@@ -327,7 +327,7 @@ SystemBase *SystemInit( void )
 	strcpy( l->RSA_CLIENT_KEY_PEM, "/home/stefkos/development/friendup/build/testkeys/client.pem" );
 	l->RSA_CLIENT_KEY_PEM[ 0 ] = 0;
 	
-	l->sl_RemoveOldSessionTimeout = 0;
+	l->sl_RemoveOldSessionTimeout = MINS30;
 	
 	if( plib != NULL && plib->Open != NULL )
 	{
@@ -382,7 +382,7 @@ SystemBase *SystemInit( void )
 			options = plib->ReadStringNCS( prop, "databaseuser:options", NULL );
 			DEBUG("[SystemBase] options %s\n",options );
 			
-			l->sl_RemoveOldSessionTimeout = plib->ReadIntNCS( prop, "user:timeout", MINS60 );
+			l->sl_RemoveOldSessionTimeout = plib->ReadIntNCS( prop, "user:timeout", MINS30 );
 			
 			l->sl_CacheFiles = plib->ReadIntNCS( prop, "Options:CacheFiles", 1 );
 			l->sl_UnMountDevicesInDB = plib->ReadIntNCS( prop, "Options:UnmountInDB", 1 );
