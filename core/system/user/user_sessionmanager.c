@@ -358,11 +358,13 @@ UserSession *USMGetSessionsByTimeout( UserSessionManager *smgr, const FULONG tim
 
 	if( ( sent = sb->GetSentinelUser( sb ) ) != NULL )
 	{
-		sqlLib->SNPrintF( sqlLib, tmpQuery, TMP_QUERY_SIZE, "( LoggedTime > '%lld' OR  `UserID` in( SELECT ID FROM `FUser` WHERE `Name`='%s') )", (long long int)(timestamp - timeout), sent->s_ConfigUsername );
+		//sqlLib->SNPrintF( sqlLib, tmpQuery, TMP_QUERY_SIZE, "( LoggedTime > '%lld' OR  `UserID` in( SELECT ID FROM `FUser` WHERE `Name`='%s') )", (long long int)(timestamp - timeout), sent->s_ConfigUsername );
+		snprintf( tmpQuery, TMP_QUERY_SIZE, "( LoggedTime > '%lld' OR  `UserID` in( SELECT ID FROM `FUser` WHERE `Name`='%s') )", (long long int)(timestamp - timeout), sent->s_ConfigUsername );
 	}
 	else
 	{
-		sqlLib->SNPrintF( sqlLib, tmpQuery, TMP_QUERY_SIZE, " ( LoggedTime > '%lld' )", (long long int)(timestamp - timeout) );
+		snprintf( tmpQuery, TMP_QUERY_SIZE, " ( LoggedTime > '%lld' )", (long long int)(timestamp - timeout) );
+		//sqlLib->SNPrintF( sqlLib, tmpQuery, TMP_QUERY_SIZE, " ( LoggedTime > '%lld' )", (long long int)(timestamp - timeout) );
 	}
 	
 	DEBUG( "[USMGetSessionsByTimeout] Sending query: %s...\n", tmpQuery );
