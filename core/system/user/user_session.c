@@ -61,7 +61,7 @@ void UserSessionInit( UserSession *us )
 		us->us_WSReqManager = WebsocketReqManagerNew();
 		us->us_SpecialID = 0x12345987;
 		
-		FQDeInit( &(us->us_MsgQueue) );
+		FQInit( &(us->us_MsgQueue) );
 	}
 }
 

@@ -55,7 +55,7 @@ typedef struct FQueue
  *
  * @param qroot pointer to main FQueue structure
  */
-#define FQDeInit( qroot ) (qroot)->fq_First = NULL
+#define FQDeInit( qroot ) (qroot)->fq_First = NULL; (qroot)->fq_Last = NULL
 
 /**
  * DeInit FriendQueue and release resources
