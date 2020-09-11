@@ -71,7 +71,7 @@ typedef struct UserSession
 	File					*us_OpenedFiles;			// opened files in user session
 	User					*us_User;					// pointer to user structure
 	void					*us_SB;						// pointer to systembase
-	char					us_UserActionInfo[ 512 ];	// last action called
+	//char					us_UserActionInfo[ 512 ];	// last action called
 	//char					us_Name[ 256 ];				// session name
 	int						us_InUseCounter;			// is session used counter
 	WebsocketReqManager		*us_WSReqManager;			// 
@@ -116,7 +116,7 @@ int UserSessionWebsocketWrite( UserSession *us, unsigned char *msgptr, int msgle
 
 static FULONG UserSessionDesc[] = { 
     SQLT_TABNAME, (FULONG)"FUserSession",       
-    SQLT_STRUCTSIZE, sizeof( struct UserSession ), 
+    SQLT_STRUCTSIZE, (sizeof( struct UserSession )*2), // lets try to alloc more memory
 	SQLT_IDINT,   (FULONG)"ID",          offsetof( struct UserSession, us_ID ), 
 	SQLT_INT,     (FULONG)"UserID", offsetof( struct UserSession, us_UserID ),
 	SQLT_STR,     (FULONG)"DeviceIdentity",       offsetof( struct UserSession, us_DeviceIdentity ),

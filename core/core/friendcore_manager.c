@@ -375,6 +375,7 @@ int FriendCoreManagerInitServices( FriendCoreManager *fcm )
 			}
 			*/
 			
+			/*
 			if( fcm->fcm_DisableExternalWS == 0 )
 			{
 				if( ( fcm->fcm_WebSocketNotification = WebSocketNew( SLIB, fcm->fcm_WSNotificationPort, fcm->fcm_WSSSLEnabled, 2, fcm->fcm_WSExtendedDebug ) ) != NULL )
@@ -387,6 +388,7 @@ int FriendCoreManagerInitServices( FriendCoreManager *fcm )
 					return -1;
 				}
 			}
+			*/
 		}
 
 		SLIB->fcm = fcm;

@@ -938,7 +938,7 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 				{
 					int pos = snprintf( data, size, "%s Path: ", (*request)->http_Uri->uri_QueryRaw );
 					UrlDecode( &data[ pos ], (char *)el->hme_Data );
-					UserLoggerStore( l->sl_ULM, loggedSession, data, loggedSession->us_UserActionInfo );
+					//UserLoggerStore( l->sl_ULM, loggedSession, data, loggedSession->us_UserActionInfo );
 					FFree( data );
 				}
 			}
@@ -952,7 +952,7 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 					{
 						int pos = snprintf( data, size, "%s Path: ", (*request)->http_RawRequestPath );
 						UrlDecode( &data[ pos ], (char *)el->hme_Data );
-						UserLoggerStore( l->sl_ULM, loggedSession, data, (*request)->http_UserActionInfo );
+						//UserLoggerStore( l->sl_ULM, loggedSession, data, (*request)->http_UserActionInfo );
 						FFree( data );
 					}
 				}
@@ -962,7 +962,7 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 		{
 			if( (*request)->http_RequestSource == HTTP_SOURCE_WS )
 			{
-				UserLoggerStore( l->sl_ULM, loggedSession, (*request)->http_Uri->uri_QueryRaw , loggedSession->us_UserActionInfo );
+				//UserLoggerStore( l->sl_ULM, loggedSession, (*request)->http_Uri->uri_QueryRaw , loggedSession->us_UserActionInfo );
 			}
 			else
 			{
@@ -975,7 +975,7 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 		if( (*request)->http_RequestSource == HTTP_SOURCE_WS )
 		{
 			DEBUG(" request %p  uri %p\n", (*request),(*request)->http_Uri );
-			UserLoggerStore( l->sl_ULM, loggedSession, (*request)->http_Uri->uri_QueryRaw , loggedSession->us_UserActionInfo );
+			//UserLoggerStore( l->sl_ULM, loggedSession, (*request)->http_Uri->uri_QueryRaw , loggedSession->us_UserActionInfo );
 		}
 		else
 		{
