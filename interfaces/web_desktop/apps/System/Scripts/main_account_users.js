@@ -9685,21 +9685,27 @@ function remountDrive( oldname, newname, userid, callback )
 }
 
 // Add new user
-function addUser( callback, username )
+function addUser( callback, uargs )
 {
-	var args = {
-		authid: Application.authId
-	};
+	var args = uargs;
+	// var args = {
+	// 	authid: Application.authId
+	// };
 	
-	if( !username )
+	// if( !username )
+	// {
+	// 	return Alert( i18n( 'i18n_you_forgot_username' ), i18n( 'i18n_you_forgot_username_desc' ) );
+	// }
+	
+	// args[ 'username' ] = username;
+	// // Temporary password
+	// args[ 'password' ] = ( Math.random() % 999 ) + '_' + ( Math.random() % 999 ) + '_' + ( Math.random() % 999 );
+	// args[ 'level' ] = ge( 'usLevel' ).value;
+	
+	if( !args.username )
 	{
 		return Alert( i18n( 'i18n_you_forgot_username' ), i18n( 'i18n_you_forgot_username_desc' ) );
 	}
-	
-	args[ 'username' ] = username;
-	// Temporary password
-	args[ 'password' ] = ( Math.random() % 999 ) + '_' + ( Math.random() % 999 ) + '_' + ( Math.random() % 999 );
-	args[ 'level' ] = ge( 'usLevel' ).value;
 	
 	if( ge( 'usWorkgroups' ) )
 	{
@@ -9732,7 +9738,7 @@ function addUser( callback, username )
 		}
 		catch( e ) {  }
 		
-		if( ShowLog ) console.log( 'addUser() ', { e:e, d:d, args: args } );
+		if( 1==1 || ShowLog ) console.log( 'addUser() ', { e:e, d:d, args: args } );
 		
 		if( e == 'ok' && d )
 		{
@@ -9863,7 +9869,7 @@ function saveUser( uid, cb, newuser )
 				}
 			}
 			
-		}, args[ 'username' ] );
+		}, args );
 		
 		// No going beyond this point
 		return;
@@ -10114,7 +10120,6 @@ function firstLogin( userid, callback )
 		var m = new Module( 'system' );
 		m.onExecuted = function( e, d )
 		{
-			//console.log( 'firstLogin( '+userid+', callback ) ', { e:e, d:d, args: { userid: userid, authid: Application.authId } } );
 			
 			if( e == 'ok' )
 			{
@@ -10134,8 +10139,12 @@ function firstLogin( userid, callback )
 					}
 				}
 				
+				if( 1==1 || ShowLog ) console.log( 'firstLogin( '+userid+', callback ) ', { e:e, args: { userid: userid, authid: Application.authId }, ret: ( data ? data : d ) } );
+				
 				if( callback ) return callback( true );	
 			}
+			
+			if( 1==1 || ShowLog ) console.log( 'firstLogin( '+userid+', callback ) ', { e:e, args: { userid: userid, authid: Application.authId }, ret: d } );
 			
 			if( callback ) return callback( false );
 		}
