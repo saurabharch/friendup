@@ -307,7 +307,6 @@ SystemBase *SystemInit( void )
 	Props *prop = NULL;
 
 	// Get a copy of the properties.library
-	//struct PropertiesLibrary *plib = ( struct PropertiesLibrary *)l->LibraryPropertiesGet( l );
 	PropertiesInterface *plib = &(l->sl_PropertiesInterface);
 	
 	if( l->sl_ActiveModuleName )
@@ -409,7 +408,7 @@ SystemBase *SystemInit( void )
 				l->l_SSLAcceptFlags = SSL_VERIFY_PEER;
 			}
 			
-			tptr  = plib->ReadStringNCS( prop, "Core:Certpath", "cfg/crt/" );
+			tptr = plib->ReadStringNCS( prop, "Core:Certpath", "cfg/crt/" );
 			if( tptr != NULL )
 			{
 				if( tptr[ 0 ] == '/' )

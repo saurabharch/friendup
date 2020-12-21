@@ -37,6 +37,17 @@ typedef struct SecurityManager
 	pthread_mutex_t				sm_Mutex;
 	HashmapLong					*sm_BadSessionLoginHM;
 	int							sm_SessionTimeout;
+	
+		
+	FBOOL						sm_UseKeyLogin;
+	// public key
+	char						*sm_PublicKeyLoginKey;
+	RSA							*sm_PublicLoginrRSA;
+	BIO							*sm_PublicMemBIO;
+	// private key
+	char						*sm_PrivateKeyLoginKey;
+	RSA							*sm_PrivateLoginrRSA;
+	BIO							*sm_PrivateMemBIO;
 } SecurityManager;
 
 
@@ -65,8 +76,16 @@ void SecurityManagerCheckSession( SecurityManager *sm, Http *request );
 void SecurityManagerRemoteOldBadSessionCalls( SecurityManager *sm );
 
 //
+// encode data by key
 //
+
+char *SecurityManagerEncodeDataByKey( SecurityManager *sm, char *data, int len, int *dstLen );
+
 //
+// decode data by key
+//
+
+char *SecurityManagerDecodeDataByKey( SecurityManager *sm, char *data, int len, int *dstLen );
 
 #endif //__SYSTEM_SECURITY_SECURITY_MANAGER_H__
 

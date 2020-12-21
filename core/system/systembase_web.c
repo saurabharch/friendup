@@ -841,65 +841,64 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 	//
 	// Check dos token
 	//
+	
+	{
+		HashmapElement *tokid = GetHEReq( *request, "dostoken" );
 		
-		//if( loggedSession == NULL )
+		DEBUG("Found DOSToken parameter, tokenid %p\n", tokid );
+		
+		if( tokid != NULL && tokid->hme_Data != NULL )
 		{
-			HashmapElement *tokid = GetHEReq( *request, "dostoken" );
+			DEBUG("Found DOSToken parameter\n");
 			
-			DEBUG("Found DOSToken parameter, tokenid %p\n", tokid );
-			
-			if( tokid != NULL && tokid->hme_Data != NULL )
+			DOSToken *dt = DOSTokenManagerGetDOSToken( l->sl_DOSTM, tokid->hme_Data );
+			if( dt != NULL && dt->ct_UserSession != NULL && dt->ct_Commands != NULL )
 			{
-				DEBUG("Found DOSToken parameter\n");
+				DEBUG("Found DOSToken\n");
 				
-				DOSToken *dt = DOSTokenManagerGetDOSToken( l->sl_DOSTM, tokid->hme_Data );
-				if( dt != NULL && dt->ct_UserSession != NULL && dt->ct_Commands != NULL )
+				int i;
+				FBOOL accessGranted = FALSE;
+				
+				// we are going through all access rights  file/read , file/write , file/open, etc.
+				
+				for( i = 0 ; i < dt->ct_MaxAccess ; i++ )
 				{
-					DEBUG("Found DOSToken\n");
+					int pathPos = 0;
+					char *pathPosPtr = dt->ct_AccessPath[ i ].path[ pathPos ];
+					accessGranted = TRUE;
 					
-					int i;
-					FBOOL accessGranted = FALSE;
-					
-					// we are going through all access rights  file/read , file/write , file/open, etc.
-					
-					for( i = 0 ; i < dt->ct_MaxAccess ; i++ )
+					DEBUG("Checking access [ %d ] \n", i );
+					// we are going through all paths
+					while( urlpath[ pathPos ] != NULL )
 					{
-						int pathPos = 0;
-						char *pathPosPtr = dt->ct_AccessPath[ i ].path[ pathPos ];
-						accessGranted = TRUE;
-						
-						DEBUG("Checking access [ %d ] \n", i );
-						// we are going through all paths
-						while( urlpath[ pathPos ] != NULL )
+						DEBUG("PathPosition %d pathposptr %s'\n", pathPos, pathPosPtr );
+						if( pathPosPtr != NULL && strcmp( urlpath[ pathPos ], pathPosPtr ) != 0 )
 						{
-							DEBUG("PathPosition %d pathposptr %s'\n", pathPos, pathPosPtr );
-							if( pathPosPtr != NULL && strcmp( urlpath[ pathPos ], pathPosPtr ) != 0 )
-							{
-								accessGranted = FALSE;
-							}
-							
-							pathPos++;
-							pathPosPtr = dt->ct_AccessPath[ i ].path[ pathPos ];
-							
-							// if there is no subpath all functions are allowed
-							if( pathPosPtr == NULL )
-							{
-								break;
-							}
+							accessGranted = FALSE;
 						}
 						
-						if( accessGranted == TRUE )
+						pathPos++;
+						pathPosPtr = dt->ct_AccessPath[ i ].path[ pathPos ];
+						
+						// if there is no subpath all functions are allowed
+						if( pathPosPtr == NULL )
 						{
-							loggedSession = dt->ct_UserSession;
 							break;
 						}
-					} // check all access rights
+					}
 					
-					DEBUG("Access granted? [ %d ]\n", accessGranted );
-					
-				} // check null values
-			} // check hashmap
-		}
+					if( accessGranted == TRUE )
+					{
+						loggedSession = dt->ct_UserSession;
+						break;
+					}
+				} // check all access rights
+				
+				DEBUG("Access granted? [ %d ]\n", accessGranted );
+				
+			} // check null values
+		} // check hashmap
+	}
 	
 	//
 	// check detach task parameter
@@ -1748,6 +1747,8 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 			{ TAG_DONE, TAG_DONE}
 		};
 		
+		FBOOL loginByKey = FALSE;
+		
 		response = HttpNewSimple( HTTP_200_OK,  tags );
 	
 		if( (*request)->http_ParsedPostContent != NULL )
@@ -1758,9 +1759,68 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 			char *deviceid = NULL;
 			char *encryptedBlob = NULL; // If the user sends publickey
 			char *locsessionid = NULL;
+			char *encData = NULL;
 			FULONG blockedTime = 0;
 			
-			HashmapElement *el = HttpGetPOSTParameter( *request, "username" );
+			HashmapElement *el = HttpGetPOSTParameter( *request, "encdata" );
+			if( el != NULL && el->hme_Data != NULL )
+			{
+				// only use this way if its enabled in config
+				if( l->sl_SecurityManager->sm_UseKeyLogin == TRUE )
+				{
+					int decDataLen = 0;
+					int encDataLen = strlen( encData );
+					int dec64DataLen = 0;
+					char *dec64Data = NULL;
+					
+					dec64Data = Base64Decode( (const unsigned char *)encData, encDataLen, &dec64DataLen );
+					if( dec64Data != NULL )
+					{
+						char *decData = SecurityManagerDecodeDataByKey( l->sl_SecurityManager, dec64Data, dec64DataLen, &decDataLen );
+						if( decData != NULL )
+						{
+							// incoming data format JSON.stringify( {
+							// username : client-username,
+							// password : client-publickey,
+							// deviceid : client-device
+							// } )
+							
+							jsmn_parser parser;
+							jsmn_init( &parser );
+							jsmntok_t t[32]; //should be enough
+
+							int tokens = jsmn_parse( &parser, decData, decDataLen, t, sizeof(t)/sizeof(t[0]) );
+							DEBUG( "[Login] Token found: %d", tokens );
+							if( tokens >= 0 )
+							{
+								char *data = decData;
+								if( t[0].type == JSMN_OBJECT ) 
+								{
+									int i;
+									
+									for( i=1 ; i < tokens ; i+=2 )
+									{
+										int msize = t[i].end - t[i].start;
+										
+										int i2 = i+1;
+										int msize2 = t[i2].end - t[i2].start;
+										
+										// put all entries from JSON to Http request
+										HashmapPut( (*request)->http_ParsedPostContent, StringDuplicateN( data + t[ i ].start, msize ), StringDuplicateN( data + t[ i2 ].start, msize2 ) );
+									}
+									
+									loginByKey = TRUE;
+								}
+							}
+							
+							FFree( decData);
+						}
+						FFree( dec64Data );
+					}
+				}
+			}
+			
+			el = HttpGetPOSTParameter( *request, "username" );
 			if( el != NULL )
 			{
 				//usrname = (char *)el->hme_Data;
@@ -1937,10 +1997,25 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 					}
 					else
 					{
-						snprintf( tmp, sizeof(tmp),
-						"{\"result\":\"%d\",\"sessionid\":\"%s\",\"level\":\"%s\",\"userid\":\"%ld\",\"fullname\":\"%s\",\"loginid\":\"%s\"}",
-						0, loggedSession->us_SessionID , loggedSession->us_User->u_IsAdmin ? "admin" : "user", loggedSession->us_User->u_ID, loggedSession->us_User->u_FullName,  loggedSession->us_SessionID
-						);
+						int tmpLen = snprintf( tmp, sizeof(tmp),
+							"{\"result\":\"%d\",\"sessionid\":\"%s\",\"level\":\"%s\",\"userid\":\"%ld\",\"fullname\":\"%s\",\"loginid\":\"%s\"}",
+							0, loggedSession->us_SessionID , loggedSession->us_User->u_IsAdmin ? "admin" : "user", loggedSession->us_User->u_ID, loggedSession->us_User->u_FullName,  loggedSession->us_SessionID
+							);
+						
+						// if key was ued to login into system
+						if( loginByKey == TRUE )
+						{
+							int elen;
+							char *dat = SecurityManagerEncodeDataByKey( l->sl_SecurityManager, tmp, tmpLen, &elen );
+							if( dat != NULL )
+							{
+								int baseEncLen;
+								
+								char *baseEnc = Base64Encode( (const unsigned char *)dat, elen, &baseEncLen );
+								strcpy( tmp, baseEnc );
+								FFree( dat );
+							}
+						}
 					}
 				}
 				else
@@ -2233,10 +2308,24 @@ Http *SysWebRequest( SystemBase *l, char **urlpath, Http **request, UserSession 
 								}
 								else
 								{
-									snprintf( tmp, sizeof(tmp) ,
+									int tmpLen = snprintf( tmp, sizeof(tmp) ,
 										"{\"result\":\"%d\",\"sessionid\":\"%s\",\"level\":\"%s\",\"userid\":\"%ld\",\"fullname\":\"%s\",\"loginid\":\"%s\",\"username\":\"%s\"}",
 										loggedUser->u_Error, loggedSession->us_SessionID , loggedSession->us_User->u_IsAdmin ? "admin" : "user", loggedUser->u_ID, loggedUser->u_FullName,  loggedSession->us_SessionID, loggedSession->us_User->u_Name );	// check user.library to display errors
 									tmpset++;
+									
+									if( loginByKey == TRUE )
+									{
+										int elen;
+										char *dat = SecurityManagerEncodeDataByKey( l->sl_SecurityManager, tmp, tmpLen, &elen );
+										if( dat != NULL )
+										{
+											int baseEncLen;
+								
+											char *baseEnc = Base64Encode( (const unsigned char *)dat, elen, &baseEncLen );
+											strcpy( tmp, baseEnc );
+											FFree( dat );
+										}
+									}
 								}
 							}
 							else
