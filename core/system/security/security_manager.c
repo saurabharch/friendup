@@ -29,9 +29,12 @@
  * @param sb pointer to SystemBase
  * @return SecurityManager structure
  */
+
 SecurityManager *SecurityManagerNew( void *sb )
 {
 	SecurityManager *sm;
+	
+	DEBUG("[SecurityManagerNew] start\n");
 	
 	if( ( sm = FCalloc( 1, sizeof( SecurityManager ) ) ) != NULL )
 	{
@@ -89,9 +92,11 @@ SecurityManager *SecurityManagerNew( void *sb )
 			}
 		}
 		
-		return sm;
+		DEBUG("[SecurityManagerNew] uselogin: %d pubkey %s privkey %s\n", sm->sm_UseKeyLogin, sm->sm_PublicKeyLoginKey, sm->sm_PrivateKeyLoginKey );
 	}
-	return NULL;
+	
+	DEBUG("[SecurityManagerNew] end\n");
+	return sm;
 }
 
 /**
@@ -99,6 +104,7 @@ SecurityManager *SecurityManagerNew( void *sb )
  *
  * @param sm pointer to SecurityManager structure which will be deleted
  */
+
 void SecurityManagerDelete( SecurityManager *sm )
 {
 	DEBUG("[SecurityManagerDelete] security manager ptr: %p\n", sm );
@@ -154,10 +160,10 @@ void SecurityManagerCheckSession( SecurityManager *sm, Http *request )
 	HashmapElement *sesreq = GetHEReq( request, "sessionid" );
 	if( sesreq != NULL )
 	{
-		DEBUG("sessionid found!\n");
+		DEBUG("[SecurityManagerCheckSession] sessionid found!\n");
 		if( sesreq->hme_Data != NULL )
 		{
-			DEBUG("sessionid value found!\n");
+			DEBUG("[SecurityManagerCheckSession] sessionid value found!\n");
 			// getting last call for session
 			HashmapElementLong *hel = NULL;
 			
@@ -188,7 +194,7 @@ void SecurityManagerCheckSession( SecurityManager *sm, Http *request )
 					// count delay value
 					float delValue = ((float)hel->hel_Data) * 1.1f;
 					
-					DEBUG("SECURITY WARNING! Same call was made %ld times, delay will be set to: %f\n", hel->hel_Data, delValue );
+					DEBUG("[SecurityManagerCheckSession] SECURITY WARNING! Same call was made %ld times, delay will be set to: %f\n", hel->hel_Data, delValue );
 					
 					if( hel->hel_Data > 5 )
 					{
@@ -200,7 +206,7 @@ void SecurityManagerCheckSession( SecurityManager *sm, Http *request )
 			}
 			else
 			{
-				DEBUG("create new entry: %s!\n", (char *)sesreq->hme_Data );
+				DEBUG("[SecurityManagerCheckSession] create new entry: %s!\n", (char *)sesreq->hme_Data );
 				if( FRIEND_MUTEX_LOCK( &(sm->sm_Mutex) ) == 0 )
 				{
 					HashmapLongPut( sm->sm_BadSessionLoginHM, StringDuplicate( sesreq->hme_Data ), 1 );
@@ -241,8 +247,10 @@ void SecurityManagerRemoteOldBadSessionCalls( SecurityManager *sm )
  * @param dstLen pointer to integer where result size will be stored
  * @return pointer to allocated memory where result will be stored
  */
+
 char *SecurityManagerEncodeDataByKey( SecurityManager *sm, char *data, int len, int *dstLen )
 {
+	DEBUG("[SecurityManagerEncodeDataByKey] start\n");
 	int cipherSize = RSA_size( sm->sm_PublicLoginrRSA)+1;
 	char *cipher = FMalloc( cipherSize+16 );
 
@@ -251,6 +259,7 @@ char *SecurityManagerEncodeDataByKey( SecurityManager *sm, char *data, int len, 
                                        (unsigned char *)cipher, sm->sm_PublicLoginrRSA, RSA_PKCS1_OAEP_PADDING);
 	//char *resp = Base64Encode( (unsigned char *)cipher, cipherSize, dstLen );
 	*dstLen = cipherSize;
+	DEBUG("[SecurityManagerEncodeDataByKey] end\n");
 	return cipher;
 }
 
@@ -265,15 +274,19 @@ char *SecurityManagerEncodeDataByKey( SecurityManager *sm, char *data, int len, 
  * @param dstLen pointer to integer where result size will be stored
  * @return pointer to allocated memory where result will be stored
  */
+
 char *SecurityManagerDecodeDataByKey( SecurityManager *sm, char *data, int len, int *dstLen )
 {
+	DEBUG("[SecurityManagerDecodeDataByKey] start\n");
 	char *back = FMalloc( len * 4 );
 	int cipherSize = RSA_private_decrypt( len,(unsigned char *)data, 
 		(unsigned char *)back, sm->sm_PrivateLoginrRSA, RSA_PKCS1_OAEP_PADDING );
 	back[ cipherSize ]=0;
 	*dstLen = cipherSize;
+	DEBUG("[SecurityManagerDecodeDataByKey] end\n");
 	return back;
 }
+
 /**
  * Return public key
  * 
@@ -281,6 +294,7 @@ char *SecurityManagerDecodeDataByKey( SecurityManager *sm, char *data, int len, 
  * @param dstLen pointer to integer where length of key will be stored
  * @return pointer to allocated memory where key is stored
  */
+
 char *SecurityManagerGetPublicKey( SecurityManager *sm, int *dstLen )
 {
 	char *ret = NULL;
