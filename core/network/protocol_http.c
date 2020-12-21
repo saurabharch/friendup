@@ -1323,6 +1323,33 @@ Http *ProtocolHttp( Socket* sock, char* data, FQUAD length )
 							if( usrSessionID != NULL ) FFree( usrSessionID );
 						}
 					}
+					
+					//
+					// return public key
+					//
+					
+					else if( strcmp( path->parts[ 0 ], "publickey" ) == 0 )
+					{
+						struct TagItem tags[] = {
+							{ HTTP_HEADER_CONTENT_TYPE, (FULONG) StringDuplicate("text/html") },
+							{ HTTP_HEADER_CONNECTION, (FULONG)StringDuplicate( "close" ) },
+							{ TAG_DONE, TAG_DONE }
+						};
+						
+						int dstLen = 0;
+						char *key = SecurityManagerGetPublicKey( SLIB->sl_SecurityManager, &dstLen );
+						if( key != NULL )
+						{
+							response = HttpNewSimple( HTTP_200_OK, tags );
+							HttpSetContent( response, key, dstLen );
+							result = 200;
+						}
+						else	// Public key not found
+						{
+							response = HttpNewSimple( HTTP_404_NOT_FOUND, tags );
+							result = 200;
+						}
+					}
 
 					//
 					// We're calling on a static file.
@@ -1564,7 +1591,7 @@ Http *ProtocolHttp( Socket* sock, char* data, FQUAD length )
 
 												struct TagItem tags[] = {
 														{ HTTP_HEADER_CONNECTION, (FULONG)StringDuplicate( "close" ) },
-														{TAG_DONE, TAG_DONE}
+														{ TAG_DONE, TAG_DONE }
 												};	
 
 												response = HttpNewSimple( HTTP_404_NOT_FOUND,  tags );

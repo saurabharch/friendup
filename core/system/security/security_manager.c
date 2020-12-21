@@ -70,7 +70,7 @@ SecurityManager *SecurityManagerNew( void *sb )
 		
 		if( sm->sm_UseKeyLogin == TRUE && sm->sm_PublicKeyLoginKey != NULL && sm->sm_PrivateKeyLoginKey != NULL )
 		{
-			LocFile *lf = LocFileNew( sm->sm_PublicKeyLoginKey, 0 );
+			LocFile *lf = LocFileNew( sm->sm_PublicKeyLoginKey, FILE_READ_NOW );
 			if( lf != NULL )
 			{
  				sm->sm_PublicLoginrRSA = RSA_new();
@@ -79,7 +79,7 @@ SecurityManager *SecurityManagerNew( void *sb )
 				LocFileDelete( lf );
 			}
 			
-			lf = LocFileNew( sm->sm_PrivateKeyLoginKey, 0 );
+			lf = LocFileNew( sm->sm_PrivateKeyLoginKey, FILE_READ_NOW );
 			if( lf != NULL )
 			{
 				sm->sm_PrivateLoginrRSA = RSA_new();
@@ -274,4 +274,33 @@ char *SecurityManagerDecodeDataByKey( SecurityManager *sm, char *data, int len, 
 	*dstLen = cipherSize;
 	return back;
 }
-
+/**
+ * Return public key
+ * 
+ * @param sm pointer to SecurityManager structure
+ * @param dstLen pointer to integer where length of key will be stored
+ * @return pointer to allocated memory where key is stored
+ */
+char *SecurityManagerGetPublicKey( SecurityManager *sm, int *dstLen )
+{
+	char *ret = NULL;
+	
+	if( sm->sm_PublicKeyLoginKey != NULL )
+	{
+		LocFile *lf = LocFileNew( sm->sm_PublicKeyLoginKey, FILE_READ_NOW );
+		if( lf != NULL )
+		{
+			DEBUG("[SecurityManagerGetPublicKey] sm->sm_PublicKeyLoginKey %s size %ld\n", sm->sm_PublicKeyLoginKey, lf->lf_FileSize );
+			if( ( ret = FMalloc( lf->lf_FileSize+1 ) ) != NULL )
+			{
+				strncpy( ret, lf->lf_Buffer, lf->lf_FileSize );
+				
+				ret[ lf->lf_FileSize ] = 0;
+				*dstLen = lf->lf_FileSize;
+				DEBUG("KEY: %s\n", ret );
+			}
+			LocFileDelete( lf );
+		}
+	}
+	return ret;
+}

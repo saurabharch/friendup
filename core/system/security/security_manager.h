@@ -87,6 +87,12 @@ char *SecurityManagerEncodeDataByKey( SecurityManager *sm, char *data, int len, 
 
 char *SecurityManagerDecodeDataByKey( SecurityManager *sm, char *data, int len, int *dstLen );
 
+//
+// return publickey
+//
+
+char *SecurityManagerGetPublicKey( SecurityManager *sm, int *dstLen );
+
 #endif //__SYSTEM_SECURITY_SECURITY_MANAGER_H__
 
 
