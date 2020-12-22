@@ -1,66 +1,74 @@
 <?php
 
-/*******************************************************************************
-*                                                                              *
-* Friend Crypto (fcrypt) v0.5                                                  *
-*                                                                              *
-* @dependency                                                                  *
-*                                                                              *
-* 	hash_pbkdf2.php                                                            *
-* 	Crypt/RSA.php                                                              *
-*   Crypt/TripleDES.php                                                        *
-*   BigInteger.php                                                             *
-*                                                                              *
-* @example                                                                     *
-*                                                                              *
-* 	// generate an object of private and public keys                           *
-* 	$fcrypt = new fcrypto();                                                   *
-* 	$keys = $fcrypt->generateKeys();                                           *
-*                                                                              *
-*   // get private and public key as string                                    *
-*   $privateKey = $fcrypt->getPrivateKey();                                    *
-*   $publicKey  = $fcrypt->getPublicKey();                                     *
-*																			   *
-*	// get an array with privatekey and publickey                              *
-*   $keys = $fcrypt->getKeys();                                 			   *
-*                                                                              *
-*   // encrypt message with receivers public key                               *
-*   $encrypted  = $fcrypt->encryptString( $msg, $publicKey );                  *
-*   $ciphertext = $encrypted->cipher;                                          *
-*                                                                              *
-*   // decrypt cipertext with receivers privateKey                             *
-*   $decrypted = $fcrypt->decryptString( $ciphertext, $privateKey );           *
-*   $plaintext = $decrypted->plaintext;                                        *
-*                                                                              *
-*   // create certificate and encrypt the data with owner keys                 *
-*   $signed      = $fcrypt->signCertificate( $msg, $publicKey, $privateKey );  *
-*   $certificate = $signed->certificate;                                       *
-*   $signid   	 = $signed->signature;                                         *
-*                                                                              *
-*   // verify certificate with owners private key                              *
-*   $valid = $fcrypt->verifyCertificate( $certificate, $privateKey, $signid ); *
-*                                                                              *
-*   // sign a message with senders private key                                 *
-*   $signature = $fcrypt->signString( $msg, $privateKey );                     *
-*                                                                              *
-*   // verify a message with senders signature and senders public key          *
-*   $valid = $fcrypt->verifyString( $msg, $signature, $publicKey );            *
-*                                                                              *
-*   // generate a random/passphrased pbkdf2 or hash key                        *
-*   $fcrypt->generateKey( password, bitLength, keySize, keyType );             *
-*																			   *
-*   // get the sha256 key that seeded the key generate                         *
-*   $key = $fcrypt->getKey();                                                  *
-*                                                                              *
-*   // set a sha256 key as seed to generate lost private and public keys       *
-*   $fcrypt->setKey( $key );                                                   *  
-*                                                                              *
-*******************************************************************************/
+/*********************************************************************************
+*                                                                                *
+* Friend Crypto (fcrypt) v0.7                                                    *
+*                                                                                *
+* @dependency                                                                    *
+*                                                                                *
+* 	hash_pbkdf2.php                                                              *
+* 	Crypt/RSA.php                                                                *
+*   Crypt/TripleDES.php                                                          *
+*   BigInteger.php                                                               *
+*                                                                                *
+* @example                                                                       *
+*                                                                                *
+* 	// generate an object of private and public keys                             *
+* 	$fcrypt = new fcrypto();                                                     *
+* 	$keys = $fcrypt->generateKeys();                                             *
+*                                                                                *
+*   // get private and public key as string                                      *
+*   $privateKey = $fcrypt->getPrivateKey();                                      *
+*   $publicKey  = $fcrypt->getPublicKey();                                       *
+*																			     *
+*	// get an array with privatekey and publickey                                *
+*   $keys = $fcrypt->getKeys();                                 			     *
+*                                                                                *
+*   // encrypt message with receivers public key                                 *
+*   $encrypted  = $fcrypt->encryptString( $msg, $publicKey );                    *
+*   $ciphertext = $encrypted->cipher;                                            *
+*                                                                                *
+*   // decrypt cipertext with receivers privateKey                               *
+*   $decrypted = $fcrypt->decryptString( $ciphertext, $privateKey );             *
+*   $plaintext = $decrypted->plaintext;                                          *
+*                                                                                *
+*   // create certificate and encrypt the data with owner keys                   *
+*   $signed      = $fcrypt->signCertificate( $msg, $publicKey, $privateKey );    *
+*   $certificate = $signed->certificate;                                         *
+*   $signid   	 = $signed->signature;                                           *
+*                                                                                *
+*   // verify certificate with owners private key                                *
+*   $valid = $fcrypt->verifyCertificate( $certificate, $privateKey, $signid );   *
+*                                                                                *
+*   // sign a message with senders private key                                   *
+*   $signature = $fcrypt->signString( $msg, $privateKey );                       *
+*                                                                                *
+*   // verify a message with senders signature and senders public key            *
+*   $valid = $fcrypt->verifyString( $msg, $signature, $publicKey );              *
+*                                                                                *
+*   // generate a random/passphrased pbkdf2 or hash key                          *
+*   $fcrypt->generateKey( password, bitLength, keySize, keyType );               *
+*																			     *
+*   // get the sha256 key that seeded the key generate                           *
+*   $key = $fcrypt->getKey();                                                    *
+*                                                                                *
+*   // set a sha256 key as seed to generate lost private and public keys         *
+*   $fcrypt->setKey( $key );                                                     *  
+*                                                                                *
+*	// get a hashed fingerprint id based on the publickey                        *
+*	$fingerprint = $fcrypt->getFingerprint( $hash, $format, $type, $publicKey ); *
+*                                                                                *
+*	// validate senders fingerprint id with his publickey                        *
+*	$valid = $fcrypt->validateFingerprint( $fingerprint, $publicKey );           *
+*                                                                                *
+*********************************************************************************/
 
 require ( dirname(__FILE__) . '/deps/php/hash_pbkdf2.php' );
 require ( dirname(__FILE__) . '/deps/php/phpseclib/Crypt/RSA.php' );
 require ( dirname(__FILE__) . '/deps/php/phpseclib/Crypt/TripleDES.php' );
 require ( dirname(__FILE__) . '/deps/php/phpseclib/Math/BigInteger.php' );
+
+// TODO: Create support for Keypair Signature Auth using $fcrypt->signString() and $fcrypt->verifyString() as signCredentials() and verifyCredentials()
 
 class fcrypto extends Crypt_RSA
 {
@@ -74,6 +82,8 @@ class fcrypto extends Crypt_RSA
 	var $aesBitLength = 32;
 	var $key = false;
 	var $keys = false;
+	var $fingerprint = false;
+	var $signature = false;
 	var $debug = false;
 	
 	// Public helper functions: __________________________________________________
@@ -209,6 +219,9 @@ class fcrypto extends Crypt_RSA
 				
 				$this->key = $key;
 				$this->keys = $keys;
+				
+				$this->fingerprint = $this->getFingerprint( 'sha256', 'hex', true );
+				
 				return $keys;
 			}
 		}
@@ -236,10 +249,148 @@ class fcrypto extends Crypt_RSA
 		return false;
 	}
 	
+	function getFingerprint ( $algorithm = 'sha256', $format = 'hex', $showtype = true, $publickey = false )
+	{
+		// openssl pkey -in path/to/store/public_key_file -pubin -pubout -outform DER | openssl sha256
+		// ssh-keygen -E sha256 -lf path/to/store/public_key_file ( ex. 2048 SHA256:8bDTSqYT5+aYU5HbzNVIhbvIN56n0Hic3D9k/TyR3gQ (RSA) )
+		
+		if( !$publickey && isset( $this->keys['publickey'] ) )
+		{
+			$publickey = $this->keys['publickey'];
+		}
+		
+		if( $publickey )
+		{
+			$publickey = $this->decodeKeyHeader( $publickey );
+			
+			// Overwrite, to forecully set new PublicKey ...
+			$this->publicExponent = false;
+			
+			$this->setPublicKey( $publickey );
+			
+			$binary = false; $base64 = false;
+			
+			switch( strtolower( $algorithm ) )
+			{
+		
+				case 'sha256':
+					
+					if( $base64 = $this->getPublicKeyFingerprint( strtolower( $algorithm ) ) )
+					{
+						if( $format != 'base64' )
+						{
+							$binary = base64_decode( $base64 );
+						}
+					}
+			
+					break;
+			
+				case 'md5':
+			
+					$binary = $this->getPublicKeyFingerprint( strtolower( $algorithm ) );
+			
+					break;
+		
+			}
+			
+			if( $binary || $base64 )
+			{
+				switch( strtolower( $format ) )
+				{
+			
+					case 'hex':
+						
+						return ( $showtype ? strtoupper( $algorithm ) . ':' : '' ) . bin2hex( $binary );
+						
+						break;
+						
+					case 'base64':
+						
+						return ( $showtype ? strtoupper( $algorithm ) . ':' : '' ) . ( $binary ? base64_encode( $binary ) : $base64 );
+						
+						break;
+					
+					case 'binary':
+						
+						return ( $base64 ? base64_decode( $base64 ) : $binary );
+						
+						break;
+					
+					case 'raw':
+						
+						return ( $base64 ? $base64 : $binary );
+						
+						break;
+			
+				}
+			}
+			
+		}
+		
+		return false;
+	}
+	
+	function validateFingerprint ( $fingerprint, $publickey = false )
+	{
+		if( !$publickey && isset( $this->keys['publickey'] ) )
+		{
+			$publickey = $this->keys['publickey'];
+		}
+		
+		if ( $fingerprint && $publickey )
+		{
+			if( strstr( $fingerprint, ':' ) )
+			{
+				if( $parts = explode( ':', $fingerprint ) )
+				{
+					$algorithm = $parts[0];
+					$hash      = $parts[1];
+					
+					if( $base64 = base64_decode( $hash ) )
+					{
+						if( $hex = bin2hex( $base64 ) )
+						{
+							$hash = $hex;
+						}
+					}
+					
+					if( $validate = $this->getFingerprint( $algorithm, 'hex', false, $publickey ) )
+					{
+						//die( $validate . "\r\n" . $hash . "\r\n\r\n" . $fingerprint );
+						
+						if( $validate == $hash )
+						{
+							return true;
+						}
+					}
+					
+				}
+			}
+		}
+		
+		return false;
+	}
+	
 	function getKeys (  )
 	{
 		if ( isset( $this->keys ) )
 		{
+			if ( !isset( $this->keys['recoverykey'] ) )
+			{
+				$this->keys['recoverykey'] = $this->getKey();
+			}
+			if ( !isset( $this->keys['fingerprint'] ) )
+			{
+				if ( $this->fingerprint )
+				{
+					$this->keys['fingerprint'] = $this->fingerprint;
+				}
+				else
+				{
+					$this->keys['fingerprint'] = $this->getFingerprint( 'sha256', 'hex', true );
+				}
+			}
+			
 			return $this->keys;
 		}
 		
@@ -274,7 +425,23 @@ class fcrypto extends Crypt_RSA
 		{
 			$str = $this->decodeKeyHeader( $str );
 			
-			$this->loadKey( $str );
+			if( $this->loadKey( $str ) )
+			{
+				if( !isset( $this->keys['privatekey'] ) )
+				{
+					if( $this->keys )
+					{
+						$this->keys = [];
+					}
+					
+					$this->keys['privatekey'] = $str;
+					
+					if( $publickey = parent::getPublicKey() )
+					{
+						$this->keys['publickey'] = $publickey;
+					}
+				}
+			}
 			
 			return true;
 		}
@@ -288,7 +455,18 @@ class fcrypto extends Crypt_RSA
 		{
 			$str = $this->decodeKeyHeader( $str );
 			
-			$this->loadKey( $str );
+			if( $this->loadKey( $str ) )
+			{
+				if( !isset( $this->keys['publickey'] ) )
+				{
+					if( $this->keys )
+					{
+						$this->keys = [];
+					}
+					
+					$this->keys['publickey'] = $str;
+				}
+			}
 			
 			return true;
 		}

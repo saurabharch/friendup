@@ -252,7 +252,51 @@
 				{
 					// If PublicKey is missing add it once and use the PublicKey from the database to send data back to client
 					
-					$fcrypt = new fcrypto();
+					/*$fcrypt = new fcrypto();
+					
+					$fingerprint = $fcrypt->getFingerprint( 'sha256', 'hex', true, trim( $json->publickey ) );
+					
+					if( file_exists( 'cfg/crt/key.pem' ) )
+					{
+						if( $privateKey = file_get_contents( 'cfg/crt/key.pem' ) )
+						{
+							
+							$fcrypt->setPrivateKeyRSA( $privateKey );
+							
+							//die( print_r( $fcrypt->getKeys(), 1 ) );
+						}
+					}
+					
+					if( file_exists( '/home/acezerox/.ssh/id_rsa.pub' ) )
+					{
+						if( $publicKey = file_get_contents( '/home/acezerox/.ssh/id_rsa.pub' ) )
+						{
+							$fingerprint = $fcrypt->getFingerprint( 'sha256', 'base64', true, $publicKey );
+							
+							//die( $fingerprint );
+						}
+					}
+					
+					if( file_exists( 'cfg/crt/pubkey.pem' ) )
+					{
+						if( $publicKey = file_get_contents( 'cfg/crt/pubkey.pem' ) )
+						{
+							$fingerprint = $fcrypt->getFingerprint( 'sha256', 'hex', true, $publicKey );
+							
+							die( $fingerprint );
+						}
+					}
+					
+					if( $fcrypt->validateFingerprint( $fingerprint, $publicKey ) )
+					{
+						die( 'VALID' );
+					}
+					else
+					{
+						die( 'NOT VALID' );
+					}*/
+					
+					
 					
 					$json->publickey = $fcrypt->encodeKeyHeader( trim( $json->publickey ) );
 					

@@ -10,7 +10,7 @@
 
 /*******************************************************************************
 *                                                                              *
-* Friend Crypto (fcrypt) v0.6                                                  *
+* Friend Crypto (fcrypt) v0.7                                                  *
 *                                                                              *
 * @dependency                                                                  *
 *                                                                              *
@@ -98,6 +98,8 @@ fcrypt = {
 	keysObject: false,
 	privKeyObject: false,
 	pubKeyObject: false,
+	fingerprint: false,
+	signature: false,
 	debug: false,
 	base64Chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
 	
@@ -375,6 +377,26 @@ fcrypt = {
 			{
 				return pubKeyObject.getPublicKey();
 			}
+		}
+		
+		return false;
+	},
+	
+	getFingerprint: function (  )
+	{
+		if( this.fingerprint )
+		{
+			return this.fingerprint;
+		}
+		
+		return false;
+	},
+	
+	getSignature: function (  )
+	{
+		if( this.signature )
+		{
+			return this.signature;
 		}
 		
 		return false;

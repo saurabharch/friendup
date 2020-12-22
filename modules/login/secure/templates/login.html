@@ -115,6 +115,7 @@
 					if(typeof ga == "function" ) ga('send', 'event', 'userloginattempt', Trim( ge( 'Username' ).value ) );
 					
 					this.login( htmlentities( Trim( ge( 'Username' ).value ) ), Trim( ge( 'Password' ).value ), ge( 'remember' ).checked, function( result, answer )
+					//this.loginRSA( htmlentities( Trim( ge( 'Username' ).value ) ), Trim( ge( 'Password' ).value ), ge( 'remember' ).checked, function( result, answer )
 					{
 						console.log( { result: result, answer: answer } );
 						
@@ -173,6 +174,66 @@
 					
 				},
 				
+				loginRSA: function( u, p, r, callback, ev, flags )
+				{
+					if( u && p )
+					{
+						var _this = parent.Workspace;
+						
+						_this.encryption.encoded = false;
+						
+						_this.encryption.setKeys( u, p );
+						
+						var m = new cAjax();
+						m.open( 'POST', '/webclient/publickey', true );
+						m.onload = function()
+						{
+							//console.log( this.responseText() );
+							
+							var pubkey = Trim( this.responseText() );
+							
+							var data = {
+								username: u,
+								password: /*Sha256.hash(*/ Trim( _this.encryption.keys.client.publickey ) /*)*/,
+								deviceid: _this.deviceid
+							};
+							
+							console.log( 'server-publickey', pubkey );
+							
+							console.log( 'encdata=' + JSON.stringify( data ) );
+							
+							var encrypted = _this.encryption.encryptRSA( JSON.stringify( data ), pubkey );
+							
+							console.log( 'encrypted', encrypted );
+							
+							//console.log( 'decrypted', _this.encryption.decryptRSA( encrypted ) );
+							
+							//console.log( 'encdata=' + JSON.stringify( data ) );
+							
+						}
+						m.send();
+						
+						
+						
+						return;
+						
+						let mm = new FriendLibrary( 'system' );
+						//m.addVar( 'username', u );
+						//m.addVar( 'password', p );
+						//m.addVar( 'deviceid', GetDeviceId() );
+						mm.addVar( 'encdata', JSON.stringify( data ) );
+						mm.onExecuted = function( json, serveranswer )
+						{
+							
+							console.log( { json: json, serveranswer: serveranswer } );
+							
+						}
+						mm.forceHTTP = true;
+						mm.forceSend = true;
+						mm.execute( 'login' );
+					}
+				},
+				
 				login: function( u, p, r, callback, ev, flags )
 				{
 					var _this = parent.Workspace;
@@ -226,6 +287,8 @@
 								console.log( 'TODO: This is deprecated because of changes to the Friend login code, we need a rewrite here ...' );
 								
 								var json = JSON.parse( decrypted );
+								
+								
 								
 								if( json )
 								{
