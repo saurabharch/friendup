@@ -74,6 +74,8 @@ class fcrypto extends Crypt_RSA
 {
 	// Public variables: _______________________________________________________
 	
+	// PrivateKey Format: CRYPT_RSA_PRIVATE_FORMAT_PKCS1
+	
 	var $rsaKeySize = 1024;
 	var $rsaKeyType = '03'; //65537 default openssl public exponent for rsa key type
 	var $aesKeySize = 256;
@@ -249,10 +251,90 @@ class fcrypto extends Crypt_RSA
 		return false;
 	}
 	
+	function getPublicBaseKey ( $format = 'CRYPT_RSA_PUBLIC_FORMAT_PKCS1', $binary = false )
+	{
+		if( empty( $this->modulus ) || empty( $this->publicExponent ) ) 
+		{
+        	return false;
+        }
+		
+		$modulus = $this->modulus->toBytes(true);
+    	$publicExponent = $this->publicExponent->toBytes(true);
+		
+		switch( $format )
+		{
+			case 'CRYPT_RSA_PUBLIC_FORMAT_PKCS1':
+				
+				$components = array(
+				    'modulus' => pack('Ca*a*', CRYPT_RSA_ASN1_INTEGER, $this->_encodeLength( strlen( $modulus ) ), $modulus ),
+				    'publicExponent' => pack('Ca*a*', CRYPT_RSA_ASN1_INTEGER, $this->_encodeLength( strlen( $publicExponent ) ), $publicExponent )
+				);
+				
+				$RSAPublicKey = pack(
+				    'Ca*a*a*',
+				    CRYPT_RSA_ASN1_SEQUENCE,
+				    $this->_encodeLength( strlen( $components['modulus'] ) + strlen( $components['publicExponent'] ) ),
+				    $components['modulus'],
+				    $components['publicExponent']
+				);
+				
+				// sequence(oid(1.2.840.113549.1.1.1), null)) = rsaEncryption.
+                $rsaOID = pack('H*', '300d06092a864886f70d0101010500'); // hex version of MA0GCSqGSIb3DQEBAQUA
+                $RSAPublicKey = chr(0) . $RSAPublicKey;
+                $RSAPublicKey = chr(3) . $this->_encodeLength(strlen($RSAPublicKey)) . $RSAPublicKey;
+
+                $RSAPublicKey = pack(
+                    'Ca*a*',
+                    CRYPT_RSA_ASN1_SEQUENCE,
+                    $this->_encodeLength(strlen($rsaOID . $RSAPublicKey)),
+                    $rsaOID . $RSAPublicKey
+                );
+				
+				//die( CRYPT_RSA_ASN1_INTEGER . "\r\n\r\n" . CRYPT_RSA_ASN1_SEQUENCE );
+				
+				if( $RSAPublicKey )
+				{
+					return ( $binary ? $RSAPublicKey : bin2hex( $RSAPublicKey ) );
+				}
+				
+				break;
+				
+			case 'CRYPT_RSA_PUBLIC_FORMAT_OPENSSH':
+				
+				$RSAPublicKey = pack('Na*Na*Na*', strlen( 'ssh-rsa' ), 'ssh-rsa', strlen( $publicExponent ), $publicExponent, strlen( $modulus ), $modulus );
+				
+				if( $RSAPublicKey )
+				{
+					return ( $binary ? $RSAPublicKey : bin2hex( $RSAPublicKey ) );
+				}
+				
+				break;
+		}
+		
+		return false;
+		
+	}
+	
+	/**
+    * Returns the public key's fingerprint // TODO: Change this description to what is currently being used ...
+    *
+    * The public key's fingerprint is returned, which is equivalent to running `ssh-keygen -lf rsa.pub`. If there is
+    * no public key currently loaded, false is returned.
+    * Example output (md5): "c1:b1:30:29:d7:b8:de:6c:97:77:10:d7:46:41:63:87" (as specified by RFC 4716)
+    *
+    * @access public
+    * @param String $algorithm The hashing algorithm to be used. Valid options are 'md5' and 'sha256'. False is returned
+    * for invalid values.
+    */
+	
 	function getFingerprint ( $algorithm = 'sha256', $format = 'hex', $showtype = true, $publickey = false )
 	{
 		// openssl pkey -in path/to/store/public_key_file -pubin -pubout -outform DER | openssl sha256
 		// ssh-keygen -E sha256 -lf path/to/store/public_key_file ( ex. 2048 SHA256:8bDTSqYT5+aYU5HbzNVIhbvIN56n0Hic3D9k/TyR3gQ (RSA) )
+		
+		// TODO: Make support for format: CRYPT_RSA_PUBLIC_FORMAT_OPENSSH
+		
+		// Current code is using the standard for format: CRYPT_RSA_PUBLIC_FORMAT_PKCS1
 		
 		if( !$publickey && isset( $this->keys['publickey'] ) )
 		{
@@ -268,61 +350,67 @@ class fcrypto extends Crypt_RSA
 			
 			$this->setPublicKey( $publickey );
 			
-			$binary = false; $base64 = false;
+			//die( '[1]: ' . $this->getPublicBaseKey( 'CRYPT_RSA_PUBLIC_FORMAT_OPENSSH' ) );
+			//die( '[2]: SHA256:' . hash( 'sha256', $this->getPublicBaseKey( 'CRYPT_RSA_PUBLIC_FORMAT_PKCS1', true ) ) );
 			
-			switch( strtolower( $algorithm ) )
+			if( $RSAPublicKey = $this->getPublicBaseKey( 'CRYPT_RSA_PUBLIC_FORMAT_PKCS1', true ) )
 			{
-		
-				case 'sha256':
-					
-					if( $base64 = $this->getPublicKeyFingerprint( strtolower( $algorithm ) ) )
-					{
-						if( $format != 'base64' )
-						{
-							$binary = base64_decode( $base64 );
-						}
-					}
-			
-					break;
-			
-				case 'md5':
-			
-					$binary = $this->getPublicKeyFingerprint( strtolower( $algorithm ) );
-			
-					break;
-		
-			}
-			
-			if( $binary || $base64 )
-			{
-				switch( strtolower( $format ) )
+				$hash = false; $base64 = false;
+				
+				switch( strtolower( $algorithm ) )
 				{
-			
-					case 'hex':
+		
+					case 'sha256':
 						
-						return ( $showtype ? strtoupper( $algorithm ) . ':' : '' ) . bin2hex( $binary );
-						
-						break;
-						
-					case 'base64':
-						
-						return ( $showtype ? strtoupper( $algorithm ) . ':' : '' ) . ( $binary ? base64_encode( $binary ) : $base64 );
-						
-						break;
-					
-					case 'binary':
-						
-						return ( $base64 ? base64_decode( $base64 ) : $binary );
-						
-						break;
-					
-					case 'raw':
-						
-						return ( $base64 ? $base64 : $binary );
+						$hash = hash( 'sha256', $RSAPublicKey );
+						//die( $hash . "\r\n" . bin2hex( $RSAPublicKey ) . "\r\n" . hash( 'sha256', bin2hex( $RSAPublicKey ) ) );
+						if( $base64 = base64_encode( $hash ) )
+						{
+							$base64 = substr( $base64, 0, strlen( $base64 ) - 1 );
+						}
 						
 						break;
 			
+					case 'md5':
+						//die( md5( $RSAPublicKey ) );
+						$hash = substr( chunk_split( md5( $RSAPublicKey ), 2, ':' ), 0, -1 );
+						
+						break;
+		
 				}
+			
+				if( $hash )
+				{
+					switch( strtolower( $format ) )
+					{
+			
+						case 'hex':
+							
+							return ( $showtype ? strtoupper( $algorithm ) . ':' : '' ) . $hash;
+							
+							break;
+						
+						case 'base64':
+							
+							return ( $showtype ? strtoupper( $algorithm ) . ':' : '' ) . ( !$base64 ? base64_encode( $hash ) : $base64 );
+						
+							break;
+						
+						case 'binary':
+							
+							return $RSAPublicKey;
+						
+							break;
+					
+						default:
+							
+							return $hash;
+							
+							break;
+			
+					}
+				}
+				
 			}
 			
 		}
@@ -330,7 +418,7 @@ class fcrypto extends Crypt_RSA
 		return false;
 	}
 	
-	function validateFingerprint ( $fingerprint, $publickey = false )
+	function validateFingerprint ( $fingerprint, $publickey = false, $base64 = false )
 	{
 		if( !$publickey && isset( $this->keys['publickey'] ) )
 		{
@@ -346,17 +434,14 @@ class fcrypto extends Crypt_RSA
 					$algorithm = $parts[0];
 					$hash      = $parts[1];
 					
-					if( $base64 = base64_decode( $hash ) )
+					/*if( base64_decode( $hash ) !== $hash )
 					{
-						if( $hex = bin2hex( $base64 ) )
-						{
-							$hash = $hex;
-						}
-					}
+						$base64 = true;
+					}*/
 					
-					if( $validate = $this->getFingerprint( $algorithm, 'hex', false, $publickey ) )
+					if( $validate = $this->getFingerprint( $algorithm, ( $base64 ? 'base64' : 'hex' ), false, $publickey ) )
 					{
-						//die( $validate . "\r\n" . $hash . "\r\n\r\n" . $fingerprint );
+						die( $validate . "\r\n" . $hash . "\r\n\r\n" . $fingerprint . "\r\n" . ( $base64 ? 'true' : 'false' ) . "\r\n" . $this->getFingerprint( $algorithm, 'hex', true, $publickey ) ."\r\n" . bin2hex( $this->getFingerprint( $algorithm, 'binary', false, $publickey ) ) );
 						
 						if( $validate == $hash )
 						{

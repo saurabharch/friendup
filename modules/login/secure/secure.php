@@ -252,11 +252,16 @@
 				{
 					// If PublicKey is missing add it once and use the PublicKey from the database to send data back to client
 					
-					/*$fcrypt = new fcrypto();
+					$fcrypt = new fcrypto();
 					
-					$fingerprint = $fcrypt->getFingerprint( 'sha256', 'hex', true, trim( $json->publickey ) );
+					$fingerprint    = $fcrypt->getFingerprint( 'sha256', 'base64', true, trim( $json->publickey ) );
+					$fingerprint1   = $fcrypt->getFingerprint( 'sha256', 'hex', true, trim( $json->publickey ) );
+					$fingerprint1_2 = $fcrypt->getFingerprint( 'sha256', 'binary', false, trim( $json->publickey ) );
+					$fingerprint2   = $fcrypt->getFingerprint( 'md5', 'hex', true, trim( $json->publickey ) );
 					
-					if( file_exists( 'cfg/crt/key.pem' ) )
+					die( $fingerprint . "\r\n" . $fingerprint1 . "\r\n" . 'SHA256:' . hash( 'sha256', bin2hex( $fingerprint1_2 ) ) . "\r\n" . $fingerprint2 . "\r\n" . 'HEX:' . bin2hex( $fingerprint1_2 ) );
+					
+					/*if( file_exists( 'cfg/crt/key.pem' ) )
 					{
 						if( $privateKey = file_get_contents( 'cfg/crt/key.pem' ) )
 						{
@@ -285,16 +290,16 @@
 							
 							die( $fingerprint );
 						}
-					}
+					}*/
 					
-					if( $fcrypt->validateFingerprint( $fingerprint, $publicKey ) )
+					if( $fcrypt->validateFingerprint( $fingerprint, trim( $json->publickey ), true ) )
 					{
 						die( 'VALID' );
 					}
 					else
 					{
 						die( 'NOT VALID' );
-					}*/
+					}
 					
 					
 					

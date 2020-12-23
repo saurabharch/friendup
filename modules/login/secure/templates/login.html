@@ -254,14 +254,20 @@
 					
 					if( r || ( this.loginUsername && this.loginPassword ) )
 					{
+						_this.encryption.encoded = false;
+						
 						//_this.encryption.keys.server = ( ge( 'publickey' ) && ge( 'publickey' ).value ? { publickey: ge( 'publickey' ).value } : false );
 						_this.encryption.setKeys( this.loginUsername, this.loginPassword );
+						
+						
 						
 						var data = {
 							username: ( u ? u : ( Application.keys ? Application.keys.username : '' ) ),
 							publickey: _this.encryption.keys.client.publickey,
 							deviceid: _this.deviceid
 						};
+						
+						console.log( 'data', { data: data, recoverykey: _this.encryption.keys.client.recoverykey } );
 						
 						var m = new cAjax();
 						m.open( 'POST', '/loginprompt', true );

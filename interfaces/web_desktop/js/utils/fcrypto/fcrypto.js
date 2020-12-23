@@ -125,6 +125,82 @@ fcrypt = {
         return bytes;
 	},
 	
+	hex2bin: function ( hex )
+	{
+		var bytes = [], str;
+
+		for( var i=0; i< hex.length-1; i+=2 )
+		{
+		    bytes.push(parseInt(hex.substr(i, 2), 16));
+		}
+		
+		return String.fromCharCode.apply(String, bytes);
+	},
+	
+	bin2hex: function ( s ) 
+	{
+		var i, f = 0,
+		a = [];
+		
+		s += '';
+		f = s.length;
+		
+		for (i = 0; i < f; i++)
+		{
+			a[i] = s.charCodeAt(i).toString(16).replace(/^([\da-f])$/, "0$1");
+		}
+		
+		return a.join('');
+	},
+	
+	pack: function ( bytes ) 
+	{
+		var chars = [];
+		for( var i = 0, n = bytes.length; i < n; ) 
+		{
+			chars.push( ( (bytes[i++] & 0xff) << 8 ) | (bytes[i++] & 0xff) );
+		}
+		return String.fromCharCode.apply( null, chars );
+	},
+	
+	unpack: function ( str ) 
+	{
+		var bytes = [];
+		for( var i = 0, n = str.length; i < n; i++ ) 
+		{
+			var char = str.charCodeAt(i);
+			bytes.push( char >>> 8, char & 0xFF );
+		}
+		return bytes;
+	},
+	
+	chr: function ( codePt )
+	{
+		if( codePt > 0xFFFF )
+		{
+			codePt -= 0x10000;
+			return String.fromCharCode( 0xD800 + ( codePt >> 10 ), 0xDC00 + ( codePt & 0x3FF ) );
+		}
+		return String.fromCharCode( codePt );
+	},
+	
+	ltrim: function ( str, chr )
+	{
+		var rgxtrim = (!chr) ? new RegExp('^\\s+') : new RegExp('^'+chr+'+');
+		return str.replace(rgxtrim, '');
+	},
+	
+	encodeLength: function ( length )
+    {
+		if( length <= 0x7F ) 
+		{
+			return this.chr( length );
+		}
+		
+		var temp = this.ltrim( this.pack( 'N', length ), this.chr(0) );
+		return this.pack( 'Ca*', 0x80 | temp.length, temp );
+    },
+	
 	b16to64: function ( h )
 	{
         var i;
@@ -331,6 +407,20 @@ fcrypt = {
 			{
 				this.key = key;
 				this.keysObject = keysObject;
+				
+				/*console.log( 'this.keysObject ', this.keysObject );
+				console.log( 'getKeys( keysObject ) ', this.getKeys( keysObject ) );*/
+				console.log( 'this.keysObject.getPublicBaseKey() ', this.keysObject.getPublicBaseKey() );
+				
+				console.log( 'this.keysObject.getPublicBaseKey() SHA256:' + deps.sha256.hex( this.keysObject.getPublicBaseKey() ) );
+				
+				// Convert a public PKCS1 PEM key into a X509 DER key
+				//var publicKeyDER = cryptoObj.createPublicKey( keysObject.getPublicKey(), { type: 'pkcs1', format: 'pem' } ).export( { type: 'spki', format: 'der' } );
+				
+				//console.log( 'publicKeyDER ', publicKeyDER );
+				
+				this.getFingerprint( 'sha256', 'hex', true, keysObject.getPublicKey() );
+				
 				return keysObject;
 			}
 		}
@@ -382,11 +472,157 @@ fcrypt = {
 		return false;
 	},
 	
-	getFingerprint: function (  )
+	getPublicBaseKey: function ()
 	{
-		if( this.fingerprint )
+		
+		// Had to do this function here to handle binary data better in javascript ... 
+		
+		var CRYPT_RSA_ASN1_INTEGER = 2;
+		var CRYPT_RSA_ASN1_SEQUENCE = 48;
+		
+		var modulus        = this.keysObject.n;
+		var publicExponent = this.keysObject.e;
+		
+		var components = {
+			'modulus'        : this.pack( 'Ca*a*', CRYPT_RSA_ASN1_INTEGER, this.encodeLength( modulus.length ), modulus ),
+			'publicExponent' : this.pack( 'Ca*a*', CRYPT_RSA_ASN1_INTEGER, this.encodeLength( publicExponent.length ), publicExponent )
+		};
+		
+		var RSAPublicKey = this.pack(
+			'Ca*a*a*',
+			CRYPT_RSA_ASN1_SEQUENCE,
+			this.encodeLength( components['modulus'].length + components['publicExponent'].length ),
+			components['modulus'],
+			components['publicExponent']
+		);
+		
+		// sequence(oid(1.2.840.113549.1.1.1), null)) = rsaEncryption.
+		var rsaOID = this.pack( 'H*', '300d06092a864886f70d0101010500' ); // hex version of MA0GCSqGSIb3DQEBAQUA
+		RSAPublicKey = this.chr(0) + RSAPublicKey;
+		RSAPublicKey = this.chr(3) + this.encodeLength( RSAPublicKey.length ) + RSAPublicKey;
+
+		RSAPublicKey = this.pack(
+			'Ca*a*',
+			CRYPT_RSA_ASN1_SEQUENCE,
+			this.encodeLength( Math.floor( rsaOID.length + RSAPublicKey.length ) ),
+			rsaOID + RSAPublicKey
+		);
+		
+		console.log( 'BINARY? ', RSAPublicKey );
+		console.log( 'SHA256? ', deps.sha256.hex( RSAPublicKey ) );
+		console.log( 'HEX? ', this.bin2hex( RSAPublicKey ) );
+		
+		
+		if( this.keysObject )
 		{
-			return this.fingerprint;
+			var n = this.keysObject.n;
+			var e = this.keysObject.e;
+			
+			var options = {
+				'array': [
+					new KJUR.asn1.DERObjectIdentifier({'oid': '1.2.840.113549.1.1.1'}), //RSA Encryption pkcs #1 oid
+					new KJUR.asn1.DERNull()
+				]
+			};
+			var first_sequence = new KJUR.asn1.DERSequence(options);
+			//console.log( 'first_sequence', first_sequence );
+			options = {
+				'array': [
+					new KJUR.asn1.DERInteger({'bigint': n}),
+					new KJUR.asn1.DERInteger({'int': e})
+				]
+			};
+			/*console.log( 'options', [
+				new KJUR.asn1.DERInteger({'bigint': n}),
+				new KJUR.asn1.DERInteger({'int': e})
+			] );*/
+			var second_sequence = new KJUR.asn1.DERSequence(options);
+			//console.log( 'second_sequence', second_sequence );
+			options = {
+				'hex': '00' + second_sequence.getEncodedHex()
+			};
+			var bit_string = new KJUR.asn1.DERBitString(options);
+			//console.log( 'bit_string', bit_string );
+			options = {
+				'array': [
+					first_sequence,
+					bit_string
+				]
+			};
+			var seq = new KJUR.asn1.DERSequence(options);
+			//console.log( 'seq', seq );
+			return seq.getEncodedHex();
+		}
+		
+		return '';
+		
+	},
+	
+	getFingerprint: function ( algorithm = 'sha256', format = 'hex', showtype = true, publickey = false )
+	{
+		// https://github.com/safebash/opencrypto
+		
+		// Initialize new OpenCrypto instance
+		//const crypt = new OpenCrypto()
+		
+		// Convert PublicKey ... "CRYPT_RSA_PUBLIC_FORMAT_OPENSSH"
+		
+		var settings = {
+			algorithm : ( algorithm ? algorithm : 'sha256' ),
+			format    : ( format    ? format    : 'hex'    ),
+			showtype  : ( showtype  ? showtype  : true     ),
+			publickey : ( publickey ? publickey : false    )
+		};
+		
+		// Pressed for time ... so this will just BE MESSY ...
+		
+		if( this.keysObject )
+		{
+			
+			
+			
+			
+			
+			
+			var pubkeybase2 = this.getPublicBaseKey();
+			
+			
+			var pubkeybase = this.keysObject.getPublicBaseKey();
+			
+			var sha256 = deps.sha256.hex( this.hex2bin( this.keysObject.getPublicBaseKey() ) );
+			
+			console.log( 'SHA256:' + sha256 );
+			
+			var binary = this.hex2bin( pubkeybase );
+			var base2 = this.bin2hex( binary );
+			var hash = ( deps ? deps.sha256.hex( binary ) : sha256.hex( binary ) );
+			var b64 = this.base64_encode( binary );
+			
+			console.log( { base: pubkeybase, base2: base2, base3: pubkeybase2, binary: binary, hash: hash, b64: b64 } );
+			
+			
+			return;
+			
+			
+			var m = 'ssh-rsa';
+			
+			var n = this.keysObject.n;
+			var e = this.keysObject.e;
+			
+			var pubkeybase = this.keysObject.getPublicBaseKey();
+			
+			console.log( 'string2bytes', this.string2bytes( pubkeybase ) );
+			
+			RSAPublicKey = this.pack( 'Na*Na*Na*', m.length, m, e.length, e, n.length, n );
+			
+			var pubkey = ( deps ? deps.sha256.hex( RSAPublicKey ) : sha256.hex( RSAPublicKey ) );
+			
+			console.log( 'settings ', { settings: settings, pubkey: pubkey, base: pubkeybase } );
+		
+			/*if( this.fingerprint )
+			{
+				return this.fingerprint;
+			}*/
 		}
 		
 		return false;
