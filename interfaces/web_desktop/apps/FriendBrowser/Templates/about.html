@@ -1,0 +1,79 @@
+<html>
+	<head>
+		<title></title>
+	</head>
+	<body>
+		<div class="ContentFull ScrollArea">
+			<div class="HRow">
+				<div class="Padding">
+					<h2>Welcome to the Friend Browser!</h2>
+					<p>
+					</p>
+				</div>
+			</div>
+		</div>
+		<style>
+			body
+			{
+				background: #112233;
+				color: white;
+				font-family: raleway, lato, helvetica;
+				font-size: 0.9em;
+			}
+			
+			.MenuBox
+			{
+				height: 70px;
+				width: 100%;
+				line-height: 70px;
+				text-align: center;
+				box-sizing: border-box;
+				border-radius: 5px;
+				background: #223344;
+				margin: 0 0 10px;
+			}
+			
+			@media (max-width: 760px)
+			{
+				.LeftColumn
+				{
+					width: 100%;
+					padding: 0;
+				}
+				.RightColumn
+				{
+					width: 100%;
+					padding: 0;
+				}
+			}
+			
+			@media (min-width: 760px)
+			{
+				.RightColumn
+				{
+					position: absolute;
+					left: 300px;
+					right: 20px;
+					bottom: 0;
+					top: 0;
+					box-sizing: border-box;
+					scroll-behavior: smooth;
+					background: #223344;
+					padding: 40px;
+					overflow: auto;
+				}
+				.LeftColumn
+				{
+					position: absolute;
+					left: 0;
+					width: 270px;
+					top: 20px;
+					bottom: 20px;
+					box-sizing: border-box;
+					padding: 40px;
+				}
+			}
+			
+		</style>
+	</body>
+</html>

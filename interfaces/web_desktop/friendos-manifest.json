@@ -1,0 +1,42 @@
+{
+  "name": "Friend Workspace",
+  "short_name": "FriendOs",
+  "description": "Friend OS is the Internet Operating System for any device, running on posix compatible hosts. Also known as the Friend Unifying Platform.",
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/gfx/system/logo_16.png",
+      "type": "image/png",
+      "sizes": "16x16"
+    },
+    {
+      "src": "/gfx/system/logo_24.png",
+      "type": "image/png",
+      "sizes": "24x24"
+    },
+    {
+      "src": "/gfx/system/logo_32.png",
+      "type": "image/png",
+      "sizes": "32x32"
+    },
+    {
+      "src": "/gfx/system/logo_40.png",
+      "type": "image/png",
+      "sizes": "40x40"
+    },
+    {
+      "src": "/gfx/system/logo_48.png",
+      "type": "image/png",
+      "sizes": "48x48"
+    },
+    {
+      "src": "/gfx/system/logo_64.png",
+      "type": "image/png",
+      "sizes": "64x64"
+    }
+  ],
+  "display": "standalone",
+  "background_color": "#dedede",
+  "theme_color": "#dedede",
+  "start_url": "/"
+}
