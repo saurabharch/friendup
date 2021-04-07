@@ -33,9 +33,9 @@
   },
   "bundleDependencies": false,
   "dependencies": {
-    "@ckeditor/ckeditor5-core": "^11.1.0",
-    "@ckeditor/ckeditor5-paragraph": "^10.0.4",
-    "@ckeditor/ckeditor5-theme-lark": "^12.0.0",
+    "@ckeditor/ckeditor5-core": "^27.0.0",
+    "@ckeditor/ckeditor5-paragraph": "^27.0.0",
+    "@ckeditor/ckeditor5-theme-lark": "^26.0.0",
     "@ckeditor/ckeditor5-ui": "^11.2.0",
     "@ckeditor/ckeditor5-utils": "^11.1.0"
   },
