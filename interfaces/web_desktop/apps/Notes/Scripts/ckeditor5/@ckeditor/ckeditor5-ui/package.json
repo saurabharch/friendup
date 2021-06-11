@@ -33,7 +33,7 @@
   },
   "bundleDependencies": false,
   "dependencies": {
-    "@ckeditor/ckeditor5-core": "^11.1.0",
+    "@ckeditor/ckeditor5-core": "^27.0.0",
     "@ckeditor/ckeditor5-theme-lark": "^12.0.0",
     "@ckeditor/ckeditor5-utils": "^11.1.0",
     "lodash-es": "^4.17.10"
