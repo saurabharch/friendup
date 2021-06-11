@@ -34,7 +34,7 @@
   "bundleDependencies": false,
   "dependencies": {
     "@ckeditor/ckeditor5-core": "^27.0.0",
-    "@ckeditor/ckeditor5-ui": "^26.0.0"
+    "@ckeditor/ckeditor5-ui": "^27.0.0"
   },
   "deprecated": false,
   "description": "Text alignment feature for CKEditor 5.",
