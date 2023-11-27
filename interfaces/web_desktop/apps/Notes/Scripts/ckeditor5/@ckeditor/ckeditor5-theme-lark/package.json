@@ -32,7 +32,7 @@
   },
   "bundleDependencies": false,
   "dependencies": {
-    "@ckeditor/ckeditor5-ui": "^11.2.0"
+    "@ckeditor/ckeditor5-ui": "^26.0.0"
   },
   "deprecated": false,
   "description": "A bright theme for CKEditor 5.",
